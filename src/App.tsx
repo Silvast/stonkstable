@@ -1,26 +1,15 @@
-import React, { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import React from 'react'
 import './App.css'
-// Import Material UI components
 import { 
-  Button, 
   AppBar, 
   Toolbar, 
   Typography, 
   Container, 
-  Card, 
-  CardContent, 
-  Box,
-  Stack,
   Divider
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-// Import our StockTable component
 import { StockTable } from './components/Table'
 
 function App(): React.ReactElement {
-  const [count, setCount] = useState<number>(0)
 
   return (
     <>

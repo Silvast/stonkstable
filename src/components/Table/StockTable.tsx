@@ -167,13 +167,13 @@ const StockTable: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
-  // State variables for API parameters
+
   const [symbol, setSymbol] = useState<string>('AAPL');
   const [stockExchange, setStockExchange] = useState<string>('US');
   const [apiKey, setApiKey] = useState<string>('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([
-    dayjs().subtract(20, 'day'), // Default from date: 20 days ago
-    dayjs().subtract(1, 'day')   // Default to date: yesterday
+    dayjs().subtract(20, 'day'), 
+    dayjs().subtract(1, 'day') 
   ]);
 
   // Read API key from URL query parameter
@@ -240,7 +240,7 @@ const StockTable: React.FC = () => {
   }, []);
 
   const handleRequestSort = (
-    event: React.MouseEvent<unknown>,
+    _event: React.MouseEvent<unknown>,
     property: keyof StockData | 'changePercent',
   ) => {
     const isAsc = orderBy === property && order === 'asc';
