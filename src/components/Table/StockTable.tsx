@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -18,7 +18,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -33,6 +35,15 @@ interface Column {
   label: string;
   numeric: boolean;
   calculate?: (row: StockData) => number;
+  minWidth?: number;
+  // Define which screen sizes this column should be visible on
+  responsiveVisibility?: {
+    xs?: boolean; // extra small screens (0px+)
+    sm?: boolean; // small screens (600px+)
+    md?: boolean; // medium screens (900px+)
+    lg?: boolean; // large screens (1200px+)
+    xl?: boolean; // extra large screens (1536px+)
+  };
 }
 
 interface StockData {
@@ -52,18 +63,56 @@ const calculatePercentChange = (row: StockData): number => {
 
 
 const columns: Column[] = [
-  { id: 'date', label: 'Date', numeric: false },
-  { id: 'open', label: 'Open', numeric: true },
-  { id: 'close', label: 'Close', numeric: true },
-  { id: 'high', label: 'High', numeric: true },
-  { id: 'low', label: 'Low', numeric: true },
+  { 
+    id: 'date', 
+    label: 'Date', 
+    numeric: false, 
+    minWidth: 100,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
+    id: 'open', 
+    label: 'Open', 
+    numeric: true,
+    minWidth: 80,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
+    id: 'close', 
+    label: 'Close', 
+    numeric: true,
+    minWidth: 80,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
+    id: 'high', 
+    label: 'High', 
+    numeric: true,
+    minWidth: 80,
+    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
+  },
+  { 
+    id: 'low', 
+    label: 'Low', 
+    numeric: true,
+    minWidth: 80,
+    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
+  },
   { 
     id: 'changePercent', 
     label: 'Change %', 
     numeric: true,
-    calculate: calculatePercentChange 
+    calculate: calculatePercentChange,
+    minWidth: 90,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
-  { id: 'volume', label: 'Volume', numeric: true },
+  { 
+    id: 'volume', 
+    label: 'Volume', 
+    numeric: true,
+    minWidth: 100,
+    responsiveVisibility: { xs: false, sm: true, md: true, lg: true, xl: true } 
+  },
 ];
 
 
@@ -123,10 +172,11 @@ interface EnhancedTableHeadProps {
   onRequestSort: (event: React.MouseEvent<unknown>, property: keyof StockData | 'changePercent') => void;
   order: Order;
   orderBy: keyof StockData | 'changePercent';
+  visibleColumns: string[];
 }
 
 function EnhancedTableHead(props: EnhancedTableHeadProps) {
-  const { order, orderBy, onRequestSort } = props;
+  const { order, orderBy, onRequestSort, visibleColumns } = props;
   const createSortHandler = (property: keyof StockData | 'changePercent') => (event: React.MouseEvent<unknown>) => {
     onRequestSort(event, property);
   };
@@ -135,24 +185,32 @@ function EnhancedTableHead(props: EnhancedTableHeadProps) {
     <TableHead>
       <TableRow>
         {columns.map((column) => (
-          <TableCell
-            key={column.id}
-            align={column.numeric ? 'right' : 'left'}
-            sortDirection={orderBy === column.id ? order : false}
-          >
-            <TableSortLabel
-              active={orderBy === column.id}
-              direction={orderBy === column.id ? order : 'asc'}
-              onClick={createSortHandler(column.id)}
+          visibleColumns.includes(column.id) && (
+            <TableCell
+              key={column.id}
+              align={column.numeric ? 'right' : 'left'}
+              sortDirection={orderBy === column.id ? order : false}
+              sx={{ 
+                minWidth: column.minWidth,
+                whiteSpace: 'nowrap',
+                paddingLeft: 1,
+                paddingRight: 1,
+              }}
             >
-              {column.label}
-              {orderBy === column.id ? (
-                <Box component="span" sx={visuallyHidden}>
-                  {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                </Box>
-              ) : null}
-            </TableSortLabel>
-          </TableCell>
+              <TableSortLabel
+                active={orderBy === column.id}
+                direction={orderBy === column.id ? order : 'asc'}
+                onClick={createSortHandler(column.id)}
+              >
+                {column.label}
+                {orderBy === column.id ? (
+                  <Box component="span" sx={visuallyHidden}>
+                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                  </Box>
+                ) : null}
+              </TableSortLabel>
+            </TableCell>
+          )
         ))}
       </TableRow>
     </TableHead>
@@ -161,6 +219,37 @@ function EnhancedTableHead(props: EnhancedTableHeadProps) {
 
 
 const StockTable: React.FC = () => {
+  const theme = useTheme();
+  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm')); // <600px (iPhone)
+  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); // 600-900px
+  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg')); // 900-1200px
+
+  // Determine which columns should be visible based on screen size
+  const getVisibleColumns = useCallback(() => {
+    if (isXsScreen) {
+      return columns
+        .filter(col => col.responsiveVisibility?.xs)
+        .map(col => col.id);
+    } else if (isSmScreen) {
+      return columns
+        .filter(col => col.responsiveVisibility?.sm)
+        .map(col => col.id);
+    } else if (isMdScreen) {
+      return columns
+        .filter(col => col.responsiveVisibility?.md)
+        .map(col => col.id);
+    } else {
+      return columns.map(col => col.id); // Show all columns on large screens
+    }
+  }, [isXsScreen, isSmScreen, isMdScreen]);
+
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(getVisibleColumns());
+
+  // Update visible columns when screen size changes
+  useEffect(() => {
+    setVisibleColumns(getVisibleColumns());
+  }, [isXsScreen, isSmScreen, isMdScreen, getVisibleColumns]);
+
   const [data, setData] = useState<StockData[]>([]);
   const [order, setOrder] = useState<Order>('desc');
   const [orderBy, setOrderBy] = useState<keyof StockData | 'changePercent'>('date');
@@ -297,72 +386,132 @@ const StockTable: React.FC = () => {
   return (
     <Box sx={{ width: '100%' }}>
       {/* Input controls for symbol, stock exchange, API key, and date range */}
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>
         <form onSubmit={handleSubmit}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" mb={2}>
-            <TextField
-              label="Stock Symbol"
-              value={symbol}
-              onChange={handleSymbolChange}
-              variant="outlined"
-              size="small"
-              fullWidth
-              sx={{ maxWidth: 150 }}
-            />
-            
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-              <InputLabel id="stock-exchange-label">Exchange</InputLabel>
-              <Select
-                labelId="stock-exchange-label"
-                value={stockExchange}
-                label="Exchange"
-                onChange={handleStockExchangeChange}
-              >
-                <MenuItem value="US">US</MenuItem>
-                <MenuItem value="HE">HE</MenuItem>
-                <MenuItem value="LSE">LSE</MenuItem>
-              </Select>
-            </FormControl>
-            
-            <TextField
-              label="API Key"
-              value={apiKey}
-              onChange={handleApiKeyChange}
-              placeholder="Optional (defaults to 'demo')"
-              variant="outlined"
-              size="small"
-              fullWidth
-              sx={{ maxWidth: 250 }}
-            />
-            
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DemoContainer components={['DateRangePicker']}>
-                <DateRangePicker
-                  value={dateRange}
-                  onChange={(newValue) => {
-                    if (newValue) {
-                      setDateRange(newValue);
-                    }
-                  }}
-                  localeText={{ start: 'From date', end: 'To date' }}
-                />
-              </DemoContainer>
-            </LocalizationProvider>
-            
-            <Button 
-              type="submit" 
-              variant="contained" 
-              color="primary"
-              disabled={loading}
+          <Stack 
+            direction="column"
+            spacing={2} 
+            alignItems="stretch" 
+            mb={2}
+          >
+            {/* First group: Stock details and API Key */}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 2, sm: 2 }}
+              alignItems="flex-start"
             >
-              Fetch Data
-            </Button>
+              {/* Symbol and Exchange always stay together in one row */}
+              <Stack 
+                direction="row" 
+                spacing={1} 
+                alignItems="center"
+                sx={{ width: { xs: '100%', sm: '60%', md: '40%' } }}
+              >
+                <TextField
+                  label="Stock Symbol"
+                  value={symbol}
+                  onChange={handleSymbolChange}
+                  variant="outlined"
+                  size="small"
+                  sx={{ flexGrow: 1, minWidth: 80 }}
+                />
+                
+                <FormControl 
+                  size="small" 
+                  sx={{ width: { xs: 110, sm: 120 } }}
+                >
+                  <InputLabel id="stock-exchange-label">Exchange</InputLabel>
+                  <Select
+                    labelId="stock-exchange-label"
+                    value={stockExchange}
+                    label="Exchange"
+                    onChange={handleStockExchangeChange}
+                  >
+                    <MenuItem value="US">US</MenuItem>
+                    <MenuItem value="HE">HE</MenuItem>
+                    <MenuItem value="LSE">LSE</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              
+              {/* API Key moves to the right on tablet+ screens */}
+              <TextField
+                label="API Key"
+                value={apiKey}
+                onChange={handleApiKeyChange}
+                placeholder="Optional (defaults to 'demo')"
+                variant="outlined"
+                size="small"
+                fullWidth
+                sx={{ 
+                  flexGrow: 1,
+                  width: { xs: '100%', sm: '40%', md: '60%' }
+                }}
+              />
+            </Stack>
+            
+            {/* Second group: Date picker and Submit button */}
+            <Stack 
+              direction={{ xs: 'column', md: 'row' }} 
+              spacing={2}
+              alignItems={{ xs: 'stretch', md: 'flex-start' }}
+            >
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <Box sx={{ width: '100%' }}>
+                  <DemoContainer 
+                    components={['DateRangePicker']}
+                    sx={{ 
+                      width: '100%',
+                      mt: 0.5,
+                      '& .MuiStack-root': {
+                        width: '100%'
+                      },
+                      '& .MuiDateRangePickerDay-root': {
+                        width: '100%'
+                      },
+                      // Fix for mobile view
+                      '& .MuiFormControl-root': {
+                        width: '100%'
+                      },
+                      '& .MuiInputBase-root': {
+                        fontSize: { xs: '0.875rem', sm: 'inherit' }
+                      }
+                    }}
+                  >
+                    <DateRangePicker
+                      value={dateRange}
+                      onChange={(newValue) => {
+                        if (newValue) {
+                          setDateRange(newValue);
+                        }
+                      }}
+                      localeText={{ start: 'From', end: 'To' }}
+                    />
+                  </DemoContainer>
+                </Box>
+              </LocalizationProvider>
+              
+              <Button 
+                type="submit" 
+                variant="contained" 
+                color="primary"
+                disabled={loading}
+                sx={{ 
+                  height: { md: 40 },
+                  alignSelf: { md: 'center' },
+                  mt: { xs: 0, md: 2 },
+                  width: { xs: '100%', md: 150 }
+                }}
+              >
+                Fetch Data
+              </Button>
+            </Stack>
           </Stack>
         </form>
       </Paper>
 
       {/* Stock data table */}
-      <Paper sx={{ width: '100%', mb: 2 }}>
+      <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress />
@@ -376,12 +525,13 @@ const StockTable: React.FC = () => {
             <Typography>No data available</Typography>
           </Box>
         ) : (
-          <TableContainer sx={{ maxHeight: 800 }}>
-            <Table stickyHeader aria-label="sticky table">
+          <TableContainer sx={{ maxHeight: 800, overflow: 'auto' }}>
+            <Table stickyHeader aria-label="sticky table" size={isXsScreen ? "small" : "medium"}>
               <EnhancedTableHead
                 order={order}
                 orderBy={orderBy}
                 onRequestSort={handleRequestSort}
+                visibleColumns={visibleColumns}
               />
               <TableBody>
                 {visibleRows.map((row, index) => (
@@ -391,12 +541,20 @@ const StockTable: React.FC = () => {
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
                     {columns.map((column) => (
-                      <TableCell 
-                        key={column.id} 
-                        align={column.numeric ? 'right' : 'left'}
-                      >
-                        {renderCellContent(row, column)}
-                      </TableCell>
+                      visibleColumns.includes(column.id) && (
+                        <TableCell 
+                          key={column.id} 
+                          align={column.numeric ? 'right' : 'left'}
+                          sx={{ 
+                            whiteSpace: 'nowrap',
+                            paddingLeft: 1,
+                            paddingRight: 1,
+                            fontSize: isXsScreen ? '0.8rem' : 'inherit'
+                          }}
+                        >
+                          {renderCellContent(row, column)}
+                        </TableCell>
+                      )
                     ))}
                   </TableRow>
                 ))}
@@ -405,6 +563,13 @@ const StockTable: React.FC = () => {
           </TableContainer>
         )}
       </Paper>
+      
+      {/* Responsive notice */}
+      {isXsScreen && (
+        <Typography variant="caption" color="text.secondary" align="center" sx={{ display: 'block', mb: 2 }}>
+          Some columns are hidden on small screens. Rotate your device for full view.
+        </Typography>
+      )}
     </Box>
   );
 };
