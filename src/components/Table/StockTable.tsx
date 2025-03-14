@@ -67,35 +67,35 @@ const columns: Column[] = [
     id: 'date', 
     label: 'Date', 
     numeric: false, 
-    minWidth: 100,
+    minWidth: 90,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'open', 
     label: 'Open', 
     numeric: true,
-    minWidth: 80,
+    minWidth: 70,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'close', 
     label: 'Close', 
     numeric: true,
-    minWidth: 80,
+    minWidth: 70,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'high', 
     label: 'High', 
     numeric: true,
-    minWidth: 80,
+    minWidth: 70,
     responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
   },
   { 
     id: 'low', 
     label: 'Low', 
     numeric: true,
-    minWidth: 80,
+    minWidth: 70,
     responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
   },
   { 
@@ -103,7 +103,7 @@ const columns: Column[] = [
     label: 'Change %', 
     numeric: true,
     calculate: calculatePercentChange,
-    minWidth: 90,
+    minWidth: 85,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
@@ -111,7 +111,7 @@ const columns: Column[] = [
     label: 'Volume', 
     numeric: true,
     minWidth: 100,
-    responsiveVisibility: { xs: false, sm: true, md: true, lg: true, xl: true } 
+    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
   },
 ];
 
@@ -193,14 +193,18 @@ function EnhancedTableHead(props: EnhancedTableHeadProps) {
               sx={{ 
                 minWidth: column.minWidth,
                 whiteSpace: 'nowrap',
-                paddingLeft: 1,
-                paddingRight: 1,
+                paddingLeft: { xs: 0.5, sm: 1 },
+                paddingRight: { xs: 0.5, sm: 1 },
+                paddingTop: { xs: 0.5, sm: 1 },
+                paddingBottom: { xs: 0.5, sm: 1 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
               }}
             >
               <TableSortLabel
                 active={orderBy === column.id}
                 direction={orderBy === column.id ? order : 'asc'}
                 onClick={createSortHandler(column.id)}
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
               >
                 {column.label}
                 {orderBy === column.id ? (
@@ -547,9 +551,11 @@ const StockTable: React.FC = () => {
                           align={column.numeric ? 'right' : 'left'}
                           sx={{ 
                             whiteSpace: 'nowrap',
-                            paddingLeft: 1,
-                            paddingRight: 1,
-                            fontSize: isXsScreen ? '0.8rem' : 'inherit'
+                            paddingLeft: { xs: 0.5, sm: 1 },
+                            paddingRight: { xs: 0.5, sm: 1 },
+                            paddingTop: { xs: 0.5, sm: 1 },
+                            paddingBottom: { xs: 0.5, sm: 1 },
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
                           }}
                         >
                           {renderCellContent(row, column)}
