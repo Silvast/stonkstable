@@ -33,136 +33,25 @@ import dayjs, { Dayjs } from 'dayjs';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 
-// Define the Order type
-type Order = 'asc' | 'desc';
 
-interface Column {
-  id: 'date' | 'open' | 'close' | 'high' | 'low' | 'volume' | 'changePercent';
-  label: string;
-  numeric: boolean;
-  calculate?: (row: StockData) => number;
-  responsiveVisibility?: {
-    xs?: boolean;
-    sm?: boolean;
-    md?: boolean;
-    lg?: boolean;
-    xl?: boolean;
-  };
-}
-
-interface StockData {
-  date: string;
-  open: number;
-  close: number;
-  high: number;
-  low: number;
-  volume: number;
-  [key: string]: string | number; 
-}
-
-function calculatePercentChange(row: StockData): number {
-  return 100 * (row.close / row.open - 1);
-}
-
-function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
-  if (orderBy === 'date') {
-    return (b[orderBy] as string).localeCompare(a[orderBy] as string);
-  }
- 
-  if (orderBy === 'changePercent') {
-    const aValue = calculatePercentChange(a as unknown as StockData);
-    const bValue = calculatePercentChange(b as unknown as StockData);
-    if (bValue < aValue) return -1;
-    if (bValue > aValue) return 1;
-    return 0;
-  }
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
-}
-
-function getComparator<Key extends keyof any>(
-  order: Order,
-  orderBy: Key,
-): (
-  a: { [key in Key]: number | string },
-  b: { [key in Key]: number | string },
-) => number {
-  return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
-  const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) {
-      return order;
-    }
-    return a[1] - b[1];
-  });
-  return stabilizedThis.map((el) => el[0]);
-}
-
-const COLUMNS: Column[] = [
-  { 
-    id: 'date', 
-    label: 'Date', 
-    numeric: false, 
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'open', 
-    label: 'Open', 
-    numeric: true,
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'close', 
-    label: 'Close', 
-    numeric: true,
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'high', 
-    label: 'High', 
-    numeric: true,
-    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'low', 
-    label: 'Low', 
-    numeric: true,
-    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'changePercent', 
-    label: 'Change %', 
-    numeric: true,
-    calculate: calculatePercentChange,
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'volume', 
-    label: 'Volume', 
-    numeric: true,
-    responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
-  },
-];
+import { 
+  Order, 
+  StockData, 
+  COLUMNS, 
+  getComparator, 
+  stableSort, 
+  renderCellContent,
+  fetchStockDataFromApi
+} from '../../utils/stockTable';
 
 const StockTable = () => {
   const theme = useTheme();
-  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm')); // <600px (iPhone)
-  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); // 600-900px
-  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg')); // 900-1200px
+  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm')); 
+  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); 
+  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg')); 
 
-  // Control for Accordion expanded state
-  const [formExpanded, setFormExpanded] = useState(!isXsScreen); // Collapsed by default on small screens
+  
+  const [formExpanded, setFormExpanded] = useState(!isXsScreen); 
 
   const getVisibleColumns = useCallback(() => {
     if (isXsScreen) {
@@ -219,30 +108,16 @@ const StockTable = () => {
       setLoading(true);
       setError(null);
       
-      const formattedFromDate = startDate.format('YYYY-MM-DD');
-      const formattedToDate = endDate.format('YYYY-MM-DD');
+      const result = await fetchStockDataFromApi(
+        symbol,
+        stockExchange,
+        startDate,
+        endDate,
+        apiKey
+      );
       
-      const tokenValue = apiKey.trim() || 'demo';
-      
-      const fullSymbol = `${symbol}.${stockExchange}`;
-      
-      const apiUrl = `https://eodhd.com/api/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
-      
-      const response = await fetch(apiUrl);
-      
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-      
-      const apiData = await response.json();
-      
-      if (Array.isArray(apiData) && apiData.length === 0) {
-        setError('No data available for the selected parameters');
-        setData([]);
-      } else {
-        setData(apiData);
-      }
-      
+      setData(result.data);
+      setError(result.error);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching stock data:', err);
@@ -287,31 +162,6 @@ const StockTable = () => {
     [data, order, orderBy],
   );
 
-  const renderCellContent = (row: StockData, column: Column) => {
-    if (column.id === 'changePercent' && column.calculate) {
-      const value = column.calculate(row);
-      const isPositive = value > 0;
-      const isZero = value === 0;
-      
-      return (
-        <span style={{ color: isPositive ? 'green' : isZero ? 'inherit' : 'red' }}>
-          {isPositive ? '+' : ''}{value.toFixed(2)}%
-        </span>
-      );
-    }
-    
-    if (column.id === 'volume') {
-      return row[column.id].toLocaleString();
-    }
-
-    if (column.numeric && typeof row[column.id] === 'number') {
-      return Number(row[column.id]).toFixed(2);
-    }
-
-    return row[column.id];
-  };
-
-
   const EnhancedTableHead = (props: {
     onRequestSort: (event: React.MouseEvent<unknown>, property: keyof StockData | 'changePercent') => void;
     order: Order;
@@ -333,8 +183,8 @@ const StockTable = () => {
                 align={column.numeric ? 'right' : 'left'}
                 sortDirection={orderBy === column.id ? order : false}
                 sx={{ 
-                  padding: { xs: '2px 2px', sm: '10px 20px' }, // Match table cell padding
-                  fontSize: { xs: '0.65rem', sm: '1rem' }, // Match table cell font size
+                  padding: { xs: '4px 4px', sm: '10px 20px' }, 
+                  fontSize: { xs: '0.8rem', sm: '1rem' }, 
                   fontWeight: 'bold',
                   whiteSpace: { xs: 'normal', sm: 'nowrap' },
                   width: { 
@@ -352,7 +202,7 @@ const StockTable = () => {
                   onClick={createSortHandler(column.id)}
                   sx={{
                     '& .MuiTableSortLabel-icon': {
-                      fontSize: { xs: '0.8rem', sm: '1rem' }  // Adjust the sort icon size
+                      fontSize: { xs: '0.9rem', sm: '1rem' }  
                     }
                   }}
                 >
@@ -377,7 +227,7 @@ const StockTable = () => {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      mx: 'auto' // Center the content
+      mx: 'auto' 
     }}>
       {/* Input controls for symbol, stock exchange, API key, and date range */}
       <Accordion 
@@ -408,7 +258,7 @@ const StockTable = () => {
             <Typography
               variant={isXsScreen ? "body2" : "body1"}
               sx={{ 
-                fontSize: { xs: '0.8rem', sm: 'inherit' }
+                fontSize: { xs: '0.9rem', sm: 'inherit' }
               }}
             >
               {isXsScreen ? 'Search' : 'Stock Search Options'} {symbol && `(${symbol}.${stockExchange})`}
@@ -446,10 +296,10 @@ const StockTable = () => {
                       flexGrow: 1, 
                       minWidth: 80,
                       '& .MuiInputLabel-root': {
-                        fontSize: { xs: '0.8rem', sm: 'inherit' }
+                        fontSize: { xs: '0.9rem', sm: 'inherit' }
                       },
                       '& .MuiInputBase-input': {
-                        fontSize: { xs: '0.8rem', sm: 'inherit' }
+                        fontSize: { xs: '0.9rem', sm: 'inherit' }
                       }
                     }}
                   />
@@ -459,10 +309,10 @@ const StockTable = () => {
                     sx={{ 
                       width: { xs: 110, sm: 120 },
                       '& .MuiInputLabel-root': {
-                        fontSize: { xs: '0.8rem', sm: 'inherit' }
+                        fontSize: { xs: '0.9rem', sm: 'inherit' }
                       },
                       '& .MuiSelect-select': {
-                        fontSize: { xs: '0.8rem', sm: 'inherit' }
+                        fontSize: { xs: '0.9rem', sm: 'inherit' }
                       }
                     }}
                   >
@@ -493,10 +343,10 @@ const StockTable = () => {
                     flexGrow: 1,
                     width: { xs: '100%', sm: '40%', md: '60%' },
                     '& .MuiInputLabel-root': {
-                      fontSize: { xs: '0.8rem', sm: 'inherit' }
+                      fontSize: { xs: '0.9rem', sm: 'inherit' }
                     },
                     '& .MuiInputBase-input': {
-                      fontSize: { xs: '0.8rem', sm: 'inherit' }
+                      fontSize: { xs: '0.9rem', sm: 'inherit' }
                     }
                   }}
                 />
@@ -526,10 +376,10 @@ const StockTable = () => {
                           fullWidth: true,
                           sx: {
                             '& .MuiInputLabel-root': {
-                              fontSize: { xs: '0.8rem', sm: 'inherit' }
+                              fontSize: { xs: '0.9rem', sm: 'inherit' }
                             },
                             '& .MuiInputBase-input': {
-                              fontSize: { xs: '0.8rem', sm: 'inherit' }
+                              fontSize: { xs: '0.9rem', sm: 'inherit' }
                             }
                           }
                         } 
@@ -548,10 +398,10 @@ const StockTable = () => {
                           fullWidth: true,
                           sx: {
                             '& .MuiInputLabel-root': {
-                              fontSize: { xs: '0.8rem', sm: 'inherit' }
+                              fontSize: { xs: '0.9rem', sm: 'inherit' }
                             },
                             '& .MuiInputBase-input': {
-                              fontSize: { xs: '0.8rem', sm: 'inherit' }
+                              fontSize: { xs: '0.9rem', sm: 'inherit' }
                             }
                           }
                         } 
@@ -571,7 +421,7 @@ const StockTable = () => {
                     alignSelf: { md: 'center' },
                     mt: { xs: 0, md: 2 },
                     width: { xs: '100%', md: 150 },
-                    fontSize: { xs: '0.8rem', sm: 'inherit' }
+                    fontSize: { xs: '0.9rem', sm: 'inherit' }
                   }}
                 >
                   Fetch Data
@@ -622,8 +472,8 @@ const StockTable = () => {
                 borderCollapse: 'collapse',
                 width: '100%',
                 '& .MuiTableCell-root': {
-                  padding: { xs: '2px 2px', sm: '10px 20px' }, // Increased padding for better spacing
-                  fontSize: { xs: '0.65rem', sm: '1rem' }, // Larger font size for normal screens
+                  padding: { xs: '4px 4px', sm: '10px 20px' }, 
+                  fontSize: { xs: '0.8rem', sm: '1rem' }, 
                   borderBottom: '1px solid rgba(224, 224, 224, 0.3)'
                 }
               }}
@@ -647,8 +497,8 @@ const StockTable = () => {
                           key={column.id} 
                           align={column.numeric ? 'right' : 'left'}
                           sx={{ 
-                            padding: { xs: '2px 2px', sm: '10px 20px' }, // Match table head padding
-                            fontSize: { xs: '0.65rem', sm: '1rem' }, // Match table head font size
+                            padding: { xs: '4px 4px', sm: '10px 20px' }, 
+                            fontSize: { xs: '0.8rem', sm: '1rem' }, 
                             whiteSpace: { xs: 'normal', sm: 'nowrap' },
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',

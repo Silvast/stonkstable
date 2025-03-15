@@ -13,7 +13,7 @@ import {
 } from '@mui/material'
 import { StockTable } from './components/Table'
 
-// Create a custom theme with wider breakpoints
+
 const theme = responsiveFontSizes(createTheme({
   breakpoints: {
     values: {
@@ -28,7 +28,7 @@ const theme = responsiveFontSizes(createTheme({
     MuiContainer: {
       styleOverrides: {
         maxWidthXl: {
-          maxWidth: '90% !important', // Use 90% width for large screens
+          maxWidth: '90% !important', 
           marginLeft: 'auto',
           marginRight: 'auto',
         },
@@ -39,7 +39,7 @@ const theme = responsiveFontSizes(createTheme({
 
 function App(): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isIPhoneSize = useMediaQuery('(max-width:400px)'); // Targets iPhone-sized devices
+  const isIPhoneSize = useMediaQuery('(max-width:400px)'); 
 
   return (
     <ThemeProvider theme={theme}>
@@ -51,7 +51,7 @@ function App(): React.ReactElement {
           bgcolor: '#19d2ac',
           height: isIPhoneSize ? '50px' : isMobile ? '60px' : 'auto',
           boxShadow: isMobile ? 1 : 3,
-          width: '90%', // Full width for the background color
+          width: '90%', 
           display: 'flex',
           alignItems: 'center', 
           justifyContent: 'center',
@@ -81,7 +81,7 @@ function App(): React.ReactElement {
               sx={{ 
                 flexGrow: 1, 
                 ml: 0,
-                textAlign: 'center', // Center the text for all screen sizes
+                textAlign: 'center', 
                 my: isMobile ? 0 : 0,
                 letterSpacing: isMobile ? '-0.5px' : 'normal',
                 fontSize: isIPhoneSize ? '1rem' : isMobile ? '1.1rem' : undefined,
@@ -101,10 +101,10 @@ function App(): React.ReactElement {
           width: { xs: '100%', lg: '90%' },
           maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
           px: { xs: 1, sm: 2, md: 3 },
-          mx: 'auto', // Center the container
+          mx: 'auto', 
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center' // Center children horizontally
+          alignItems: 'center' 
         }}
       >
         <Typography 
