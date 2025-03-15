@@ -23,14 +23,12 @@ import {
   useTheme,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  IconButton
+  AccordionDetails
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import dayjs, { Dayjs } from 'dayjs';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
