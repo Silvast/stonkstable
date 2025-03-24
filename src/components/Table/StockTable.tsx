@@ -182,15 +182,6 @@ const StockTable = () => {
     setOrderBy(property);
   };
 
-  const handleSymbolChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newSymbol = event.target.value;
-    setSymbol(newSymbol);
-    
-    // Find the corresponding stock entry for this symbol
-    const matchingStock = stockOptions.find(stock => stock.Code === newSymbol);
-    setSelectedStock(matchingStock || null);
-  };
-
   const handleStockChange = (_event: React.SyntheticEvent, newValue: StockEntry | null) => {
     setSelectedStock(newValue);
     if (newValue) {
