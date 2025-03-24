@@ -23,7 +23,8 @@ import {
   useTheme,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Autocomplete
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -43,6 +44,22 @@ import {
   renderCellContent,
   fetchStockDataFromApi
 } from '../../utils/stockTable';
+
+// Import stock lists
+import heStocks from '../../assets/he.json';
+import usStocks from '../../assets/us.json';
+import lseStocks from '../../assets/lse.json';
+
+// Define a type for the stock entries
+interface StockEntry {
+  Code: string;
+  Name: string;
+  Country: string;
+  Exchange: string;
+  Currency: string;
+  Type: string;
+  Isin: string | null;
+}
 
 const StockTable = () => {
   const theme = useTheme();
@@ -88,6 +105,11 @@ const StockTable = () => {
   const [apiKey, setApiKey] = useState<string>('');
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(20, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs().subtract(1, 'day'));
+  const [stockOptions, setStockOptions] = useState<StockEntry[]>(usStocks as StockEntry[]);
+  const [selectedStock, setSelectedStock] = useState<StockEntry | null>(() => {
+    const defaultStock = (usStocks as StockEntry[]).find(stock => stock.Code === 'AAPL');
+    return defaultStock || null;
+  });
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -97,6 +119,26 @@ const StockTable = () => {
       setApiKey(apiKeyParam);
     }
   }, []);
+
+  // Update stock options when exchange changes
+  useEffect(() => {
+    let stockList: StockEntry[] = [];
+    
+    if (stockExchange === 'US') {
+      stockList = usStocks as StockEntry[];
+    } else if (stockExchange === 'HE') {
+      stockList = heStocks as StockEntry[];
+    } else if (stockExchange === 'LSE') {
+      stockList = lseStocks as StockEntry[];
+    }
+    
+    setStockOptions(stockList);
+    
+    // Find the currently selected stock in the new list if possible
+    const found = stockList.find(stock => stock.Code === symbol);
+    setSelectedStock(found || null);
+    
+  }, [stockExchange, symbol]);
 
   const fetchStockData = async () => {
     if (!startDate || !endDate) {
@@ -141,7 +183,19 @@ const StockTable = () => {
   };
 
   const handleSymbolChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSymbol(event.target.value);
+    const newSymbol = event.target.value;
+    setSymbol(newSymbol);
+    
+    // Find the corresponding stock entry for this symbol
+    const matchingStock = stockOptions.find(stock => stock.Code === newSymbol);
+    setSelectedStock(matchingStock || null);
+  };
+
+  const handleStockChange = (_event: React.SyntheticEvent, newValue: StockEntry | null) => {
+    setSelectedStock(newValue);
+    if (newValue) {
+      setSymbol(newValue.Code);
+    }
   };
 
   const handleStockExchangeChange = (event: SelectChangeEvent) => {
@@ -286,22 +340,43 @@ const StockTable = () => {
                   alignItems="center"
                   sx={{ width: { xs: '100%', sm: '60%', md: '40%' } }}
                 >
-                  <TextField
-                    label="Stock Symbol"
-                    value={symbol}
-                    onChange={handleSymbolChange}
-                    variant="outlined"
-                    size="small"
-                    sx={{ 
-                      flexGrow: 1, 
-                      minWidth: 80,
-                      '& .MuiInputLabel-root': {
-                        fontSize: { xs: '0.9rem', sm: 'inherit' }
-                      },
-                      '& .MuiInputBase-input': {
-                        fontSize: { xs: '0.9rem', sm: 'inherit' }
-                      }
+                  <Autocomplete
+                    id="stock-symbol-autocomplete"
+                    options={stockOptions}
+                    getOptionLabel={(option) => `${option.Name} (${option.Code})`}
+                    value={selectedStock}
+                    onChange={handleStockChange}
+                    isOptionEqualToValue={(option, value) => option.Code === value.Code}
+                    filterOptions={(options, state) => {
+                      const inputValue = state.inputValue.toLowerCase();
+                      return options.filter(option => 
+                        option.Name.toLowerCase().includes(inputValue) || 
+                        option.Code.toLowerCase().includes(inputValue)
+                      );
                     }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Stock Symbol"
+                        variant="outlined"
+                        size="small"
+                        aria-label="Search for a stock by name or symbol"
+                        sx={{ 
+                          flexGrow: 1, 
+                          minWidth: 80,
+                          '& .MuiInputLabel-root': {
+                            fontSize: { xs: '0.9rem', sm: 'inherit' }
+                          },
+                          '& .MuiInputBase-input': {
+                            fontSize: { xs: '0.9rem', sm: 'inherit' }
+                          }
+                        }}
+                      />
+                    )}
+                    sx={{ flexGrow: 1 }}
+                    loading={loading}
+                    loadingText="Loading stocks..."
+                    noOptionsText="No stocks found"
                   />
                   
                   <FormControl 
