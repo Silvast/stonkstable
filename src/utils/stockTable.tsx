@@ -139,7 +139,7 @@ export const COLUMNS: Column[] = [
     label: 'Prev. day Change %', 
     numeric: true,
     calculate: calculatePrevDayChangePercent,
-    responsiveVisibility: { xs: false, sm: true, md: true, lg: true, xl: true } 
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'volume', 

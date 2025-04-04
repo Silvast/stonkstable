@@ -234,10 +234,11 @@ const StockTable = () => {
                   fontWeight: 'bold',
                   whiteSpace: { xs: 'normal', sm: 'nowrap' },
                   width: { 
-                    xs: column.id === 'date' ? '25%' : 
-                        column.id === 'open' ? '25%' : 
-                        column.id === 'close' ? '25%' : 
-                        column.id === 'changePercent' ? '25%' : 'auto',
+                    xs: column.id === 'date' ? '20%' : 
+                        column.id === 'open' ? '20%' : 
+                        column.id === 'close' ? '20%' : 
+                        column.id === 'changePercent' ? '20%' :
+                        column.id === 'prevDayChangePercent' ? '20%' : 'auto',
                     sm: 'auto' 
                   }
                 }}
@@ -526,7 +527,7 @@ const StockTable = () => {
         ) : (
           <TableContainer sx={{ 
             maxHeight: formExpanded ? 800 : { xs: 'calc(100vh - 160px)', sm: 'calc(100vh - 190px)' },
-            overflowX: 'hidden',
+            overflowX: { xs: 'auto', sm: 'hidden' },
             flexGrow: 1 
           }}>
             <Table 
@@ -534,12 +535,13 @@ const StockTable = () => {
               aria-label="sticky table" 
               size="small"
               sx={{ 
-                tableLayout: { xs: 'fixed', sm: 'auto' },
+                tableLayout: { xs: 'auto', sm: 'auto' },
+                minWidth: { xs: 600, sm: 'auto' },
                 borderSpacing: 0,
                 borderCollapse: 'collapse',
                 width: '100%',
                 '& .MuiTableCell-root': {
-                  padding: { xs: '4px 4px', sm: '10px 20px' }, 
+                  padding: { xs: '4px 8px', sm: '10px 20px' }, 
                   fontSize: { xs: '0.8rem', sm: '1rem' }, 
                   borderBottom: '1px solid rgba(224, 224, 224, 0.3)'
                 }
@@ -570,10 +572,11 @@ const StockTable = () => {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             width: { 
-                              xs: column.id === 'date' ? '25%' : 
-                                  column.id === 'open' ? '25%' : 
-                                  column.id === 'close' ? '25%' : 
-                                  column.id === 'changePercent' ? '25%' : 'auto',
+                              xs: column.id === 'date' ? '20%' : 
+                                  column.id === 'open' ? '20%' : 
+                                  column.id === 'close' ? '20%' : 
+                                  column.id === 'changePercent' ? '20%' :
+                                  column.id === 'prevDayChangePercent' ? '20%' : 'auto',
                               sm: 'auto' 
                             }
                           }}
