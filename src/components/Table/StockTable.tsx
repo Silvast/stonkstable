@@ -61,6 +61,8 @@ interface StockEntry {
   Isin: string | null;
 }
 
+type ColumnId = keyof StockData | 'changePercent' | 'prevDayChangePercent';
+
 const StockTable = () => {
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm')); 
@@ -96,7 +98,7 @@ const StockTable = () => {
 
   const [data, setData] = useState<StockData[]>([]);
   const [order, setOrder] = useState<Order>('desc');
-  const [orderBy, setOrderBy] = useState<keyof StockData | 'changePercent'>('date');
+  const [orderBy, setOrderBy] = useState<ColumnId>('date');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -175,7 +177,7 @@ const StockTable = () => {
 
   const handleRequestSort = (
     _event: React.MouseEvent<unknown>,
-    property: keyof StockData | 'changePercent',
+    property: ColumnId
   ) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -203,18 +205,17 @@ const StockTable = () => {
   };
 
   const visibleRows = React.useMemo(
-    () => stableSort(data, getComparator(order, orderBy)),
+    () => stableSort(data, getComparator(order, orderBy, data)),
     [data, order, orderBy],
   );
 
-  const EnhancedTableHead = (props: {
-    onRequestSort: (event: React.MouseEvent<unknown>, property: keyof StockData | 'changePercent') => void;
+  const EnhancedTableHead: React.FC<{
+    onRequestSort: (event: React.MouseEvent<unknown>, property: ColumnId) => void;
     order: Order;
-    orderBy: keyof StockData | 'changePercent';
+    orderBy: ColumnId;
     visibleColumns: string[];
-  }) => {
-    const { order, orderBy, onRequestSort, visibleColumns } = props;
-    const createSortHandler = (property: keyof StockData | 'changePercent') => (event: React.MouseEvent<unknown>) => {
+  }> = ({ order, orderBy, onRequestSort, visibleColumns }) => {
+    const createSortHandler = (property: ColumnId) => (event: React.MouseEvent<unknown>) => {
       onRequestSort(event, property);
     };
 
@@ -225,7 +226,7 @@ const StockTable = () => {
             visibleColumns.includes(column.id) && (
               <TableCell
                 key={column.id}
-                align={column.numeric ? 'right' : 'left'}
+                align='left'
                 sortDirection={orderBy === column.id ? order : false}
                 sx={{ 
                   padding: { xs: '4px 4px', sm: '10px 20px' }, 
@@ -561,7 +562,7 @@ const StockTable = () => {
                       visibleColumns.includes(column.id) && (
                         <TableCell 
                           key={column.id} 
-                          align={column.numeric ? 'right' : 'left'}
+                          align='left'
                           sx={{ 
                             padding: { xs: '4px 4px', sm: '10px 20px' }, 
                             fontSize: { xs: '0.8rem', sm: '1rem' }, 
@@ -577,7 +578,7 @@ const StockTable = () => {
                             }
                           }}
                         >
-                          {renderCellContent(row, column)}
+                          {renderCellContent(row, column, data)}
                         </TableCell>
                       )
                     ))}

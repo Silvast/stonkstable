@@ -4,10 +4,10 @@ import dayjs from 'dayjs';
 export type Order = 'asc' | 'desc';
 
 export interface Column {
-  id: 'date' | 'open' | 'close' | 'high' | 'low' | 'volume' | 'changePercent';
+  id: 'date' | 'open' | 'close' | 'high' | 'low' | 'volume' | 'changePercent' | 'prevDayChangePercent';
   label: string;
   numeric: boolean;
-  calculate?: (row: StockData) => number;
+  calculate?: (row: StockData, data?: StockData[]) => number;
   responsiveVisibility?: {
     xs?: boolean;
     sm?: boolean;
@@ -31,7 +31,17 @@ export function calculatePercentChange(row: StockData): number {
   return 100 * (row.close / row.open - 1);
 }
 
-export function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
+export function calculatePrevDayChangePercent(row: StockData, data?: StockData[]): number {
+  if (!data) return 0;
+  const currentIndex = data.findIndex(item => item.date === row.date);
+  if (currentIndex >= 0 && currentIndex > 0) {
+    const prevDayClose = data[currentIndex - 1].close;
+    return ((row.close / prevDayClose) - 1) * 100;
+  }
+  return 0;
+}
+
+export function descendingComparator<T>(a: T, b: T, orderBy: keyof T, data?: StockData[]) {
   if (orderBy === 'date') {
     return (b[orderBy] as string).localeCompare(a[orderBy] as string);
   }
@@ -43,6 +53,15 @@ export function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     if (bValue > aValue) return 1;
     return 0;
   }
+
+  if (orderBy === 'prevDayChangePercent') {
+    const aValue = calculatePrevDayChangePercent(a as unknown as StockData, data);
+    const bValue = calculatePrevDayChangePercent(b as unknown as StockData, data);
+    if (bValue < aValue) return -1;
+    if (bValue > aValue) return 1;
+    return 0;
+  }
+
   if (b[orderBy] < a[orderBy]) {
     return -1;
   }
@@ -55,13 +74,14 @@ export function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
 export function getComparator<Key extends keyof any>(
   order: Order,
   orderBy: Key,
+  data?: StockData[],
 ): (
   a: { [key in Key]: number | string },
   b: { [key in Key]: number | string },
 ) => number {
   return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
+    ? (a, b) => descendingComparator(a, b, orderBy, data)
+    : (a, b) => -descendingComparator(a, b, orderBy, data);
 }
 
 export function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) {
@@ -115,6 +135,13 @@ export const COLUMNS: Column[] = [
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
+    id: 'prevDayChangePercent', 
+    label: 'Prev. day Change %', 
+    numeric: true,
+    calculate: calculatePrevDayChangePercent,
+    responsiveVisibility: { xs: false, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
     id: 'volume', 
     label: 'Volume', 
     numeric: true,
@@ -162,9 +189,21 @@ export const fetchStockDataFromApi = async (
   }
 };
 
-export const renderCellContent = (row: StockData, column: Column): React.ReactNode => {
+export const renderCellContent = (row: StockData, column: Column, data?: StockData[]): React.ReactNode => {
   if (column.id === 'changePercent' && column.calculate) {
     const value = column.calculate(row);
+    const isPositive = value > 0;
+    const isZero = value === 0;
+    
+    return (
+      <span style={{ color: isPositive ? 'green' : isZero ? 'inherit' : 'red' }}>
+        {isPositive ? '+' : ''}{value.toFixed(2)}%
+      </span>
+    );
+  }
+
+  if (column.id === 'prevDayChangePercent' && column.calculate && data) {
+    const value = column.calculate(row, data);
     const isPositive = value > 0;
     const isZero = value === 0;
     
