@@ -104,6 +104,20 @@ export const COLUMNS: Column[] = [
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
+    id: 'changePercent', 
+    label: 'Change %', 
+    numeric: true,
+    calculate: calculatePercentChange,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
+    id: 'prevDayChangePercent', 
+    label: 'Prev. day Change %', 
+    numeric: true,
+    calculate: calculatePrevDayChangePercent,
+    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
+  },
+  { 
     id: 'open', 
     label: 'Open', 
     numeric: true,
@@ -126,20 +140,6 @@ export const COLUMNS: Column[] = [
     label: 'Low', 
     numeric: true,
     responsiveVisibility: { xs: false, sm: false, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'changePercent', 
-    label: 'Change %', 
-    numeric: true,
-    calculate: calculatePercentChange,
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
-  },
-  { 
-    id: 'prevDayChangePercent', 
-    label: 'Prev. day Change %', 
-    numeric: true,
-    calculate: calculatePrevDayChangePercent,
-    responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'volume', 
