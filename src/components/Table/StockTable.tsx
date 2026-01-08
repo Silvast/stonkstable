@@ -35,12 +35,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 
 
-import { 
-  Order, 
-  StockData, 
-  COLUMNS, 
-  getComparator, 
-  stableSort, 
+import {
+  Order,
+  StockData,
+  COLUMNS,
+  getComparator,
+  stableSort,
   renderCellContent,
   fetchStockDataFromApi
 } from '../../utils/stockTable';
@@ -65,12 +65,12 @@ type ColumnId = keyof StockData | 'changePercent' | 'prevDayChangePercent';
 
 const StockTable = () => {
   const theme = useTheme();
-  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm')); 
-  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); 
-  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg')); 
+  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
-  
-  const [formExpanded, setFormExpanded] = useState(!isXsScreen); 
+
+  const [formExpanded, setFormExpanded] = useState(!isXsScreen);
 
   const getVisibleColumns = useCallback(() => {
     if (isXsScreen) {
@@ -86,9 +86,9 @@ const StockTable = () => {
         .filter(col => col.responsiveVisibility?.md)
         .map(col => col.id);
     } else {
-      return COLUMNS.map(col => col.id); 
+      return COLUMNS.map(col => col.id);
     }
-  }, [isXsScreen, isSmScreen, isMdScreen]); 
+  }, [isXsScreen, isSmScreen, isMdScreen]);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(getVisibleColumns());
 
@@ -101,7 +101,7 @@ const StockTable = () => {
   const [orderBy, setOrderBy] = useState<ColumnId>('date');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [symbol, setSymbol] = useState<string>('AAPL');
   const [stockExchange, setStockExchange] = useState<string>('US');
   const [apiKey, setApiKey] = useState<string>('');
@@ -116,7 +116,7 @@ const StockTable = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const apiKeyParam = urlParams.get('apikey');
-    
+
     if (apiKeyParam) {
       setApiKey(apiKeyParam);
     }
@@ -125,7 +125,7 @@ const StockTable = () => {
   // Update stock options when exchange changes
   useEffect(() => {
     let stockList: StockEntry[] = [];
-    
+
     if (stockExchange === 'US') {
       stockList = usStocks as StockEntry[];
     } else if (stockExchange === 'HE') {
@@ -133,13 +133,12 @@ const StockTable = () => {
     } else if (stockExchange === 'LSE') {
       stockList = lseStocks as StockEntry[];
     }
-    
+
     setStockOptions(stockList);
-    
+
     // Find the currently selected stock in the new list if possible
     const found = stockList.find(stock => stock.Code === symbol);
     setSelectedStock(found || null);
-    
   }, [stockExchange, symbol]);
 
   const fetchStockData = async () => {
@@ -151,7 +150,7 @@ const StockTable = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await fetchStockDataFromApi(
         symbol,
         stockExchange,
@@ -159,7 +158,7 @@ const StockTable = () => {
         endDate,
         apiKey
       );
-      
+
       setData(result.data);
       setError(result.error);
       setLoading(false);
@@ -228,18 +227,18 @@ const StockTable = () => {
                 key={column.id}
                 align='left'
                 sortDirection={orderBy === column.id ? order : false}
-                sx={{ 
-                  padding: { xs: '4px 4px', sm: '10px 20px' }, 
-                  fontSize: { xs: '0.8rem', sm: '1rem' }, 
+                sx={{
+                  padding: { xs: '4px 4px', sm: '10px 20px' },
+                  fontSize: { xs: '0.8rem', sm: '1rem' },
                   fontWeight: 'bold',
                   whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                  width: { 
-                    xs: column.id === 'date' ? '20%' : 
-                        column.id === 'open' ? '20%' : 
-                        column.id === 'close' ? '20%' : 
-                        column.id === 'changePercent' ? '20%' :
-                        column.id === 'prevDayChangePercent' ? '20%' : 'auto',
-                    sm: 'auto' 
+                  width: {
+                    xs: column.id === 'date' ? '20%' :
+                      column.id === 'open' ? '20%' :
+                        column.id === 'close' ? '20%' :
+                          column.id === 'changePercent' ? '20%' :
+                            column.id === 'prevDayChangePercent' ? '20%' : 'auto',
+                    sm: 'auto'
                   }
                 }}
               >
@@ -249,7 +248,7 @@ const StockTable = () => {
                   onClick={createSortHandler(column.id)}
                   sx={{
                     '& .MuiTableSortLabel-icon': {
-                      fontSize: { xs: '0.9rem', sm: '1rem' }  
+                      fontSize: { xs: '0.9rem', sm: '1rem' }
                     }
                   }}
                 >
@@ -269,19 +268,19 @@ const StockTable = () => {
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      mx: 'auto' 
+      mx: 'auto'
     }}>
       {/* Input controls for symbol, stock exchange, API key, and date range */}
-      <Accordion 
+      <Accordion
         expanded={formExpanded}
         onChange={() => setFormExpanded(!formExpanded)}
-        sx={{ 
-          mb: { xs: formExpanded ? 2 : 0.5, sm: formExpanded ? 2 : 1 }, 
+        sx={{
+          mb: { xs: formExpanded ? 2 : 0.5, sm: formExpanded ? 2 : 1 },
           boxShadow: theme.shadows[1],
           '&:before': {
             display: 'none',
@@ -293,10 +292,10 @@ const StockTable = () => {
           aria-controls="search-panel-content"
           id="search-panel-header"
           sx={{
-            minHeight: { xs: 40, sm: 48 }, 
-            py: { xs: 0, sm: 0.5 }, 
+            minHeight: { xs: 40, sm: 48 },
+            py: { xs: 0, sm: 0.5 },
             '& .MuiAccordionSummary-content': {
-              margin: { xs: '6px 0', sm: '10px 0' }, 
+              margin: { xs: '6px 0', sm: '10px 0' },
             },
           }}
         >
@@ -304,7 +303,7 @@ const StockTable = () => {
             <SearchIcon fontSize={isXsScreen ? "small" : "small"} />
             <Typography
               variant={isXsScreen ? "body2" : "body1"}
-              sx={{ 
+              sx={{
                 fontSize: { xs: '0.9rem', sm: 'inherit' }
               }}
             >
@@ -314,22 +313,22 @@ const StockTable = () => {
         </AccordionSummary>
         <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
           <form onSubmit={handleSubmit}>
-            <Stack 
+            <Stack
               direction="column"
-              spacing={2} 
-              alignItems="stretch" 
+              spacing={2}
+              alignItems="stretch"
               mb={1}
             >
               {/* First group: Stock details and API Key */}
-              <Stack 
+              <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 spacing={{ xs: 2, sm: 2 }}
                 alignItems="flex-start"
               >
                 {/* Symbol and Exchange always stay together in one row */}
-                <Stack 
-                  direction="row" 
-                  spacing={1} 
+                <Stack
+                  direction="row"
+                  spacing={1}
                   alignItems="center"
                   sx={{ width: { xs: '100%', sm: '60%', md: '40%' } }}
                 >
@@ -342,10 +341,16 @@ const StockTable = () => {
                     isOptionEqualToValue={(option, value) => option.Code === value.Code}
                     filterOptions={(options, state) => {
                       const inputValue = state.inputValue.toLowerCase();
-                      return options.filter(option => 
-                        option.Name.toLowerCase().includes(inputValue) || 
-                        option.Code.toLowerCase().includes(inputValue)
-                      );
+                      const MAX_OPTIONS = 100; // Limit results to prevent performance issues
+                      const result: StockEntry[] = [];
+                      for (const option of options) {
+                        if (option.Name.toLowerCase().includes(inputValue) ||
+                          option.Code.toLowerCase().includes(inputValue)) {
+                          result.push(option);
+                          if (result.length >= MAX_OPTIONS) break; // Stop early once we have enough
+                        }
+                      }
+                      return result;
                     }}
                     renderInput={(params) => (
                       <TextField
@@ -354,8 +359,8 @@ const StockTable = () => {
                         variant="outlined"
                         size="small"
                         aria-label="Search for a stock by name or symbol"
-                        sx={{ 
-                          flexGrow: 1, 
+                        sx={{
+                          flexGrow: 1,
                           minWidth: 80,
                           '& .MuiInputLabel-root': {
                             fontSize: { xs: '0.9rem', sm: 'inherit' }
@@ -371,10 +376,10 @@ const StockTable = () => {
                     loadingText="Loading stocks..."
                     noOptionsText="No stocks found"
                   />
-                  
-                  <FormControl 
-                    size="small" 
-                    sx={{ 
+
+                  <FormControl
+                    size="small"
+                    sx={{
                       width: { xs: 110, sm: 120 },
                       '& .MuiInputLabel-root': {
                         fontSize: { xs: '0.9rem', sm: 'inherit' }
@@ -397,7 +402,7 @@ const StockTable = () => {
                     </Select>
                   </FormControl>
                 </Stack>
-                
+
                 {/* API Key moves to the right on tablet+ screens */}
                 <TextField
                   label="API Key"
@@ -407,7 +412,7 @@ const StockTable = () => {
                   variant="outlined"
                   size="small"
                   fullWidth
-                  sx={{ 
+                  sx={{
                     flexGrow: 1,
                     width: { xs: '100%', sm: '40%', md: '60%' },
                     '& .MuiInputLabel-root': {
@@ -419,16 +424,16 @@ const StockTable = () => {
                   }}
                 />
               </Stack>
-              
+
               {/* Second group: Date picker and Submit button */}
-              <Stack 
-                direction={{ xs: 'column', md: 'row' }} 
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
                 spacing={2}
                 alignItems={{ xs: 'stretch', md: 'flex-start' }}
               >
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <Stack
-                    direction={{ xs: 'column', sm: 'row' }} 
+                    direction={{ xs: 'column', sm: 'row' }}
                     spacing={2}
                     width="100%"
                   >
@@ -438,8 +443,8 @@ const StockTable = () => {
                       onChange={(newValue) => {
                         setStartDate(newValue);
                       }}
-                      slotProps={{ 
-                        textField: { 
+                      slotProps={{
+                        textField: {
                           size: 'small',
                           fullWidth: true,
                           sx: {
@@ -450,7 +455,7 @@ const StockTable = () => {
                               fontSize: { xs: '0.9rem', sm: 'inherit' }
                             }
                           }
-                        } 
+                        }
                       }}
                       sx={{ flexGrow: 1 }}
                     />
@@ -460,8 +465,8 @@ const StockTable = () => {
                       onChange={(newValue) => {
                         setEndDate(newValue);
                       }}
-                      slotProps={{ 
-                        textField: { 
+                      slotProps={{
+                        textField: {
                           size: 'small',
                           fullWidth: true,
                           sx: {
@@ -472,19 +477,19 @@ const StockTable = () => {
                               fontSize: { xs: '0.9rem', sm: 'inherit' }
                             }
                           }
-                        } 
+                        }
                       }}
                       sx={{ flexGrow: 1 }}
                     />
                   </Stack>
                 </LocalizationProvider>
-                
-                <Button 
-                  type="submit" 
-                  variant="contained" 
+
+                <Button
+                  type="submit"
+                  variant="contained"
                   color="primary"
                   disabled={loading}
-                  sx={{ 
+                  sx={{
                     height: { md: 40 },
                     alignSelf: { md: 'center' },
                     mt: { xs: 0, md: 2 },
@@ -501,10 +506,10 @@ const StockTable = () => {
       </Accordion>
 
       {/* Stock data table */}
-      <Paper 
-        sx={{ 
-          width: '100%', 
-          mb: 2, 
+      <Paper
+        sx={{
+          width: '100%',
+          mb: 2,
           overflow: 'hidden',
           flexGrow: 1,
           display: 'flex',
@@ -525,24 +530,24 @@ const StockTable = () => {
             <Typography>No data available</Typography>
           </Box>
         ) : (
-          <TableContainer sx={{ 
+          <TableContainer sx={{
             maxHeight: formExpanded ? 800 : { xs: 'calc(100vh - 160px)', sm: 'calc(100vh - 190px)' },
             overflowX: { xs: 'auto', sm: 'hidden' },
-            flexGrow: 1 
+            flexGrow: 1
           }}>
-            <Table 
-              stickyHeader 
-              aria-label="sticky table" 
+            <Table
+              stickyHeader
+              aria-label="sticky table"
               size="small"
-              sx={{ 
+              sx={{
                 tableLayout: { xs: 'auto', sm: 'auto' },
                 minWidth: { xs: 600, sm: 'auto' },
                 borderSpacing: 0,
                 borderCollapse: 'collapse',
                 width: '100%',
                 '& .MuiTableCell-root': {
-                  padding: { xs: '4px 8px', sm: '10px 20px' }, 
-                  fontSize: { xs: '0.8rem', sm: '1rem' }, 
+                  padding: { xs: '4px 8px', sm: '10px 20px' },
+                  fontSize: { xs: '0.8rem', sm: '1rem' },
                   borderBottom: '1px solid rgba(224, 224, 224, 0.3)'
                 }
               }}
@@ -562,22 +567,22 @@ const StockTable = () => {
                   >
                     {COLUMNS.map((column) => (
                       visibleColumns.includes(column.id) && (
-                        <TableCell 
-                          key={column.id} 
+                        <TableCell
+                          key={column.id}
                           align='left'
-                          sx={{ 
-                            padding: { xs: '4px 4px', sm: '10px 20px' }, 
-                            fontSize: { xs: '0.8rem', sm: '1rem' }, 
+                          sx={{
+                            padding: { xs: '4px 4px', sm: '10px 20px' },
+                            fontSize: { xs: '0.8rem', sm: '1rem' },
                             whiteSpace: { xs: 'normal', sm: 'nowrap' },
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            width: { 
-                              xs: column.id === 'date' ? '20%' : 
-                                  column.id === 'open' ? '20%' : 
-                                  column.id === 'close' ? '20%' : 
-                                  column.id === 'changePercent' ? '20%' :
-                                  column.id === 'prevDayChangePercent' ? '20%' : 'auto',
-                              sm: 'auto' 
+                            width: {
+                              xs: column.id === 'date' ? '20%' :
+                                column.id === 'open' ? '20%' :
+                                  column.id === 'close' ? '20%' :
+                                    column.id === 'changePercent' ? '20%' :
+                                      column.id === 'prevDayChangePercent' ? '20%' : 'auto',
+                              sm: 'auto'
                             }
                           }}
                         >
