@@ -1,8 +1,6 @@
 import React from 'react'
 import './App.css'
 import { 
-  AppBar, 
-  Toolbar, 
   Typography, 
   Container, 
   useMediaQuery,
@@ -15,6 +13,30 @@ import { StockTable } from './components/Table'
 
 
 const theme = responsiveFontSizes(createTheme({
+  palette: {
+    primary: {
+      main: '#0066CC',
+    },
+    text: {
+      primary: '#1A1A1A',
+      secondary: '#6C757D',
+    },
+    background: {
+      default: '#FFFFFF',
+      paper: '#FFFFFF',
+    },
+    divider: '#E9ECEF',
+  },
+  typography: {
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    h6: {
+      fontWeight: 400,
+      fontSize: '1.25rem',
+    },
+    body2: {
+      fontSize: '0.875rem',
+    },
+  },
   breakpoints: {
     values: {
       xs: 0,
@@ -39,90 +61,63 @@ const theme = responsiveFontSizes(createTheme({
 
 function App(): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isIPhoneSize = useMediaQuery('(max-width:400px)'); 
 
   return (
     <ThemeProvider theme={theme}>
-      <AppBar 
-        position="static" 
-        color="primary" 
+      <Box 
         sx={{ 
-          mb: { xs: 1, sm: 4 }, 
-          bgcolor: '#19d2ac',
-          height: isIPhoneSize ? '50px' : isMobile ? '60px' : 'auto',
-          boxShadow: isMobile ? 1 : 3,
-          width: '90%', 
-          display: 'flex',
-          alignItems: 'center', 
-          justifyContent: 'center',
+          bgcolor: 'background.default',
+          minHeight: '100vh',
+          pt: { xs: 3, sm: 4 }
         }}
       >
-        <Box 
+        <Container 
+          maxWidth="xl" 
+          disableGutters={false}
           sx={{ 
-            width: { xs: '100%', lg: '90%' }, 
-            maxWidth: '1800px',
-            display: 'flex',
-            justifyContent: 'center'
+            width: { xs: '100%', lg: '90%' },
+            maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
+            px: { xs: 2, sm: 3, md: 4 },
+            mx: 'auto', 
           }}
         >
-          <Toolbar 
+          {/* Minimal Header */}
+          <Box 
             sx={{ 
-              flexDirection: isMobile ? 'column' : 'row', 
-              py: isIPhoneSize ? 0.5 : isMobile ? 1 : 1,
-              minHeight: isIPhoneSize ? '50px' : isMobile ? '60px' : '64px',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
+              mb: { xs: 3, sm: 4 },
+              pb: { xs: 2, sm: 3 },
+              borderBottom: '1px solid',
+              borderColor: 'divider',
             }}
           >
             <Typography 
-              variant={isIPhoneSize ? "h6" : isMobile ? "h5" : "h3"} 
-              component="div" 
+              variant="h6"
+              component="h1" 
               sx={{ 
-                flexGrow: 1, 
-                ml: 0,
-                textAlign: 'center', 
-                my: isMobile ? 0 : 0,
-                letterSpacing: isMobile ? '-0.5px' : 'normal',
-                fontSize: isIPhoneSize ? '1rem' : isMobile ? '1.1rem' : undefined,
-                lineHeight: isMobile ? 1.2 : 1.5,
+                color: 'text.primary',
+                fontWeight: 400,
+                mb: 0.5,
+                fontSize: { xs: '1.1rem', sm: '1.25rem' }
               }}
             >
               Stonksei taulukkona
             </Typography>
-          </Toolbar>
-        </Box>
-      </AppBar>
-      
-      <Container 
-        maxWidth="xl" 
-        disableGutters={false}
-        sx={{ 
-          width: { xs: '100%', lg: '90%' },
-          maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
-          px: { xs: 1, sm: 2, md: 3 },
-          mx: 'auto', 
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center' 
-        }}
-      >
-        <Typography 
-          variant={isMobile ? "subtitle1" : "h6"} 
-          component="h1" 
-          gutterBottom 
-          align="center" 
-          sx={{ 
-            mb: { xs: 2, sm: 4 },
-            fontSize: isMobile ? '0.9rem' : undefined
-          }}
-        >
-          Viimeisen 20 päivän osakekurssit
-        </Typography>
+            <Typography 
+              variant="body2"
+              component="p" 
+              sx={{ 
+                color: 'text.secondary',
+                fontSize: { xs: '0.813rem', sm: '0.875rem' }
+              }}
+            >
+              Viimeisen 20 päivän osakekurssit
+            </Typography>
+          </Box>
 
-        <StockTable />
-        
-      </Container>
+          <StockTable />
+          
+        </Container>
+      </Box>
     </ThemeProvider>
   )
 }
