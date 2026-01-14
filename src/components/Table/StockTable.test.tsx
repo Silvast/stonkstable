@@ -327,3 +327,4 @@ describe('StockTable Component', () => {
         })
     })
 })
+

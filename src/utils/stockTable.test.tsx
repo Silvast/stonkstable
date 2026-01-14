@@ -310,3 +310,4 @@ describe('renderCellContent', () => {
         expect(result).toBe('2024-01-10')
     })
 })
+
