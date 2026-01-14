@@ -5,45 +5,45 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 const theme = responsiveFontSizes(createTheme({
-  breakpoints: {
-    values: {
-      xs: 0,
-      sm: 600,
-      md: 960,
-      lg: 1280,
-      xl: 1920,
-    },
-  },
-  components: {
-    MuiContainer: {
-      styleOverrides: {
-        maxWidthXl: {
-          maxWidth: '90% !important',
-          marginLeft: 'auto',
-          marginRight: 'auto',
+    breakpoints: {
+        values: {
+            xs: 0,
+            sm: 600,
+            md: 960,
+            lg: 1280,
+            xl: 1920,
         },
-      },
     },
-  },
+    components: {
+        MuiContainer: {
+            styleOverrides: {
+                maxWidthXl: {
+                    maxWidth: '90% !important',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                },
+            },
+        },
+    },
 }))
 
 interface AllTheProvidersProps {
-  children: React.ReactNode
+    children: React.ReactNode
 }
 
 const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
-  return (
-    <ThemeProvider theme={theme}>
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        {children}
-      </LocalizationProvider>
-    </ThemeProvider>
-  )
+    return (
+        <ThemeProvider theme={theme}>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                {children}
+            </LocalizationProvider>
+        </ThemeProvider>
+    )
 }
 
 const customRender = (
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>,
+    ui: ReactElement,
+    options?: Omit<RenderOptions, 'wrapper'>,
 ) => render(ui, { wrapper: AllTheProviders, ...options })
 
 export * from '@testing-library/react'
