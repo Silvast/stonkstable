@@ -3,7 +3,6 @@ import './App.css'
 import { 
   Typography, 
   Container, 
-  useMediaQuery,
   createTheme,
   ThemeProvider,
   responsiveFontSizes,
@@ -60,8 +59,6 @@ const theme = responsiveFontSizes(createTheme({
 }));
 
 function App(): React.ReactElement {
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
   return (
     <ThemeProvider theme={theme}>
       <Box 

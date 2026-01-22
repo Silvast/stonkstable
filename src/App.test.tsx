@@ -6,7 +6,7 @@ import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
 describe('App Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        global.fetch = vi.fn(() => mockSuccessResponse(mockStockData))
+        vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
     })
 
     describe('Initial Render', () => {
@@ -37,8 +37,9 @@ describe('App Component', () => {
     describe('Theme Integration', () => {
         it('applies ThemeProvider correctly', () => {
             render(<App />)
-            const appBar = screen.getByRole('banner')
-            expect(appBar).toBeInTheDocument()
+            // ThemeProvider is applied - check that styled components render
+            const title = screen.getByText(/Stonksei taulukkona/i)
+            expect(title).toBeInTheDocument()
         })
 
         it('renders Container with correct layout', () => {
@@ -51,8 +52,11 @@ describe('App Component', () => {
     describe('Layout Structure', () => {
         it('has proper heading hierarchy', () => {
             render(<App />)
-            const heading = screen.getByRole('heading', { name: /Viimeisen 20 päivän osakekurssit/i })
+            // Main title is an h1 heading
+            const heading = screen.getByRole('heading', { name: /Stonksei taulukkona/i })
             expect(heading).toBeInTheDocument()
+            // Subtitle is a paragraph, not a heading
+            expect(screen.getByText(/Viimeisen 20 päivän osakekurssit/i)).toBeInTheDocument()
         })
 
         it('contains all major sections', async () => {
@@ -80,9 +84,9 @@ describe('App Component', () => {
 
         it('applies responsive styles through theme', () => {
             render(<App />)
-            const appBar = screen.getByRole('banner')
-            expect(appBar).toBeInTheDocument()
-            // Theme and responsive styles are applied through MUI
+            // Theme and responsive styles are applied through MUI components
+            const title = screen.getByText(/Stonksei taulukkona/i)
+            expect(title).toBeInTheDocument()
         })
     })
 
@@ -98,10 +102,7 @@ describe('App Component', () => {
         it('all components render within ThemeProvider', async () => {
             render(<App />)
 
-            // AppBar (part of theme)
-            expect(screen.getByRole('banner')).toBeInTheDocument()
-
-            // Typography components
+            // Typography components (header section)
             expect(screen.getByText(/Stonksei taulukkona/i)).toBeInTheDocument()
             expect(screen.getByText(/Viimeisen 20 päivän osakekurssit/i)).toBeInTheDocument()
 
@@ -115,7 +116,7 @@ describe('App Component', () => {
     describe('Data Flow', () => {
         it('StockTable can fetch data within App context', async () => {
             const fetchSpy = vi.fn(() => mockSuccessResponse(mockStockData))
-            global.fetch = fetchSpy
+            vi.stubGlobal('fetch', fetchSpy)
 
             render(<App />)
 
