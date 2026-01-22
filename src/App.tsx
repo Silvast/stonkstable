@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import './App.css'
 import { 
+  Button,
   Typography, 
   Container, 
   useMediaQuery,
@@ -9,7 +10,7 @@ import {
   responsiveFontSizes,
   Box
 } from '@mui/material'
-import { StockTable } from './components/Table'
+import { Analysis, StockTablePage } from './pages'
 
 
 const theme = responsiveFontSizes(createTheme({
@@ -61,6 +62,7 @@ const theme = responsiveFontSizes(createTheme({
 
 function App(): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [currentPage, setCurrentPage] = useState<'stock-table' | 'analysis'>('stock-table');
 
   return (
     <ThemeProvider theme={theme}>
@@ -68,7 +70,8 @@ function App(): React.ReactElement {
         sx={{ 
           bgcolor: 'background.default',
           minHeight: '100vh',
-          pt: { xs: 3, sm: 4 }
+          pt: { xs: 3, sm: 4 },
+          width: '100%',
         }}
       >
         <Container 
@@ -88,8 +91,69 @@ function App(): React.ReactElement {
               pb: { xs: 2, sm: 3 },
               borderBottom: '1px solid',
               borderColor: 'divider',
+              width: '100%',
             }}
           >
+            {/* Navigation (top) */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 1,
+                mb: { xs: 2, sm: 2.5 },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                justifyContent: 'flex-start',
+                width: '100%',
+              }}
+            >
+              <Button
+                type="button"
+                onClick={() => setCurrentPage('stock-table')}
+                aria-current={currentPage === 'stock-table' ? 'page' : undefined}
+                variant="text"
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  justifyContent: 'flex-start',
+                  borderRadius: 1,
+                  px: 1,
+                  py: 0.75,
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  minWidth: 'fit-content',
+                  color: currentPage === 'stock-table' ? 'primary.main' : 'text.secondary',
+                  bgcolor: currentPage === 'stock-table' ? 'action.hover' : 'transparent',
+                  border: '1px solid',
+                  borderColor: currentPage === 'stock-table' ? 'primary.main' : 'divider',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                Stock Table
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setCurrentPage('analysis')}
+                aria-current={currentPage === 'analysis' ? 'page' : undefined}
+                variant="text"
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  justifyContent: 'flex-start',
+                  borderRadius: 1,
+                  px: 1,
+                  py: 0.75,
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  minWidth: 'fit-content',
+                  color: currentPage === 'analysis' ? 'primary.main' : 'text.secondary',
+                  bgcolor: currentPage === 'analysis' ? 'action.hover' : 'transparent',
+                  border: '1px solid',
+                  borderColor: currentPage === 'analysis' ? 'primary.main' : 'divider',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                Analysis
+              </Button>
+            </Box>
+
             <Typography 
               variant="h6"
               component="h1" 
@@ -114,7 +178,7 @@ function App(): React.ReactElement {
             </Typography>
           </Box>
 
-          <StockTable />
+          {currentPage === 'stock-table' ? <StockTablePage /> : <Analysis />}
           
         </Container>
       </Box>
