@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 // Mock global fetch for API tests
-global.fetch = vi.fn()
+vi.stubGlobal('fetch', vi.fn())
 
 // Mock window.matchMedia for responsive tests
 Object.defineProperty(window, 'matchMedia', {

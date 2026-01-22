@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import './App.css'
-import { 
+import {
   Button,
-  Typography, 
-  Container, 
+  Typography,
+  Container,
   useMediaQuery,
   createTheme,
   ThemeProvider,
@@ -51,7 +51,7 @@ const theme = responsiveFontSizes(createTheme({
     MuiContainer: {
       styleOverrides: {
         maxWidthXl: {
-          maxWidth: '90% !important', 
+          maxWidth: '90% !important',
           marginLeft: 'auto',
           marginRight: 'auto',
         },
@@ -66,27 +66,27 @@ function App(): React.ReactElement {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           bgcolor: 'background.default',
           minHeight: '100vh',
           pt: { xs: 3, sm: 4 },
           width: '100%',
         }}
       >
-        <Container 
-          maxWidth="xl" 
+        <Container
+          maxWidth="xl"
           disableGutters={false}
-          sx={{ 
+          sx={{
             width: { xs: '100%', lg: '90%' },
             maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
             px: { xs: 2, sm: 3, md: 4 },
-            mx: 'auto', 
+            mx: 'auto',
           }}
         >
           {/* Minimal Header */}
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               mb: { xs: 3, sm: 4 },
               pb: { xs: 2, sm: 3 },
               borderBottom: '1px solid',
@@ -154,10 +154,10 @@ function App(): React.ReactElement {
               </Button>
             </Box>
 
-            <Typography 
+            <Typography
               variant="h6"
-              component="h1" 
-              sx={{ 
+              component="h1"
+              sx={{
                 color: 'text.primary',
                 fontWeight: 400,
                 mb: 0.5,
@@ -166,10 +166,10 @@ function App(): React.ReactElement {
             >
               Stonksei taulukkona
             </Typography>
-            <Typography 
+            <Typography
               variant="body2"
-              component="p" 
-              sx={{ 
+              component="p"
+              sx={{
                 color: 'text.secondary',
                 fontSize: { xs: '0.813rem', sm: '0.875rem' }
               }}
@@ -179,7 +179,7 @@ function App(): React.ReactElement {
           </Box>
 
           {currentPage === 'stock-table' ? <StockTablePage /> : <Analysis />}
-          
+
         </Container>
       </Box>
     </ThemeProvider>

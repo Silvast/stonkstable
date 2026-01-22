@@ -6,12 +6,11 @@ import StockTable from './StockTable'
 import { mockStockData, mockSuccessResponse, mockErrorResponse, mockEmptyResponse } from '../../test/mocks/stockApi'
 import heStocks from '../../assets/he.json'
 import usStocks from '../../assets/us.json'
-import lseStocks from '../../assets/lse.json'
 
 describe('StockTable Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        global.fetch = vi.fn(() => mockSuccessResponse(mockStockData))
+        vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
     })
 
     describe('Initial Render', () => {
@@ -106,7 +105,6 @@ describe('StockTable Component', () => {
 
             // Wait for filtered options to appear
             await waitFor(() => {
-                const listbox = screen.queryByRole('listbox')
                 // Autocomplete should respond to input
                 expect(autocomplete).toBeInTheDocument()
             })
@@ -173,7 +171,7 @@ describe('StockTable Component', () => {
         it('triggers API call when Fetch Data button is clicked', async () => {
             const user = userEvent.setup()
             const fetchSpy = vi.fn(() => mockSuccessResponse(mockStockData))
-            global.fetch = fetchSpy
+            vi.stubGlobal('fetch', fetchSpy)
 
             render(<StockTable />)
 
@@ -218,7 +216,7 @@ describe('StockTable Component', () => {
             const fetchPromise = new Promise<Response>((resolve) => {
                 resolvePromise = resolve
             })
-            global.fetch = vi.fn(() => fetchPromise)
+            vi.stubGlobal('fetch', vi.fn(() => fetchPromise))
 
             render(<StockTable />)
 
@@ -239,7 +237,7 @@ describe('StockTable Component', () => {
 
     describe('Error States', () => {
         it('displays error message when API fails', async () => {
-            global.fetch = vi.fn(() => mockErrorResponse(500, 'Internal Server Error'))
+            vi.stubGlobal('fetch', vi.fn(() => mockErrorResponse(500, 'Internal Server Error')))
 
             render(<StockTable />)
 
@@ -249,7 +247,7 @@ describe('StockTable Component', () => {
         })
 
         it('displays message when no data is available', async () => {
-            global.fetch = vi.fn(() => mockEmptyResponse())
+            vi.stubGlobal('fetch', vi.fn(() => mockEmptyResponse()))
 
             render(<StockTable />)
 

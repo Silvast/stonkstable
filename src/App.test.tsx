@@ -7,7 +7,7 @@ import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
 describe('App Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        global.fetch = vi.fn(() => mockSuccessResponse(mockStockData))
+        vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
     })
 
     it('renders navigation buttons at the top', () => {

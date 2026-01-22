@@ -6,7 +6,7 @@ import { mockStockData, mockSuccessResponse } from '../test/mocks/stockApi';
 describe('StockTablePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn(() => mockSuccessResponse(mockStockData));
+    vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)));
   });
 
   it('renders StockTable within the page', async () => {

@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { StockData } from '../../utils/stockTable'
 
 export const mockStockData: StockData[] = [
@@ -67,7 +68,7 @@ export const mockEmptyResponse = () => {
 }
 
 export const setupMockFetch = (mockImplementation: (...args: any[]) => Promise<Response>) => {
-    global.fetch = vi.fn(mockImplementation)
+    vi.stubGlobal('fetch', vi.fn(mockImplementation))
 }
 
 export const resetMockFetch = () => {
