@@ -167,8 +167,11 @@ export const fetchStockDataFromApi = async (
     const tokenValue = apiKey.trim() || 'demo';
     
     const fullSymbol = `${symbol}.${stockExchange}`;
-    
-    const apiUrl = `https://eodhd.com/api/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
+
+    const configuredProxyUrl = import.meta.env.VITE_EOD_PROXY_URL?.trim();
+    const proxyUrl = configuredProxyUrl ? configuredProxyUrl.replace(/\/$/, '') : '';
+    const baseUrl = proxyUrl || 'https://eodhd.com/api/eod';
+    const apiUrl = `${baseUrl}/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
     
     const response = await fetch(apiUrl);
     
