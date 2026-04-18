@@ -168,7 +168,7 @@ export const fetchStockDataFromApi = async (
     
     const fullSymbol = `${symbol}.${stockExchange}`;
     
-    const apiUrl = `https://eodhd.com/api/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
+    const apiUrl = `/api/eodhd/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
     
     const response = await fetch(apiUrl);
     
