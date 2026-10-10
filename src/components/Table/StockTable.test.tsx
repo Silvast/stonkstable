@@ -306,6 +306,22 @@ describe('StockTable Component', () => {
         })
     })
 
+    describe('Favourite star in the search header', () => {
+        it('toggles the favourite without collapsing the search panel', async () => {
+            const user = userEvent.setup()
+            localStorage.clear()
+            render(<StockTable />)
+
+            const header = document.getElementById('search-panel-header')!
+            expect(header).toHaveAttribute('aria-expanded', 'true')
+
+            await user.click(within(header).getByRole('button', { name: 'Add AAPL to favourites' }))
+
+            expect(within(header).getByRole('button', { name: 'Remove AAPL from favourites' })).toBeInTheDocument()
+            expect(header).toHaveAttribute('aria-expanded', 'true')
+        })
+    })
+
     describe('Responsive Behavior', () => {
         it('shows accordion for search options', () => {
             render(<StockTable />)

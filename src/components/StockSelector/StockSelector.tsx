@@ -10,6 +10,7 @@ import {
   TextField
 } from '@mui/material';
 import { ExchangeCode, StockEntry, useStockSelection } from '../../context/StockSelectionContext';
+import FavouriteToggle from '../Favourites/FavouriteToggle';
 
 interface StockSelectorProps {
   loading?: boolean;
@@ -119,6 +120,8 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
             <MenuItem value="LSE">LSE</MenuItem>
           </Select>
         </FormControl>
+
+        <FavouriteToggle stock={selectedStock} exchange={exchange} />
       </Stack>
 
       <TextField

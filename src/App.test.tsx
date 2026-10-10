@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { render, screen, waitFor } from './test/utils/testHelpers'
+import { render as renderWithoutTestProviders } from '@testing-library/react'
 import App from './App'
 import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
 
@@ -8,6 +9,12 @@ describe('App Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
+    })
+
+    it('provides its own contexts so it renders without the test providers', () => {
+        renderWithoutTestProviders(<App />)
+
+        expect(screen.getAllByRole('button', { name: 'Add AAPL to favourites' }).length).toBeGreaterThan(0)
     })
 
     it('renders navigation buttons at the top', () => {

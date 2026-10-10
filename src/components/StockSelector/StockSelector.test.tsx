@@ -23,6 +23,31 @@ const renderSelector = () => render(
 describe('StockSelector Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        localStorage.clear()
+    })
+
+    describe('Favourite star', () => {
+        it('toggles the selected stock as a favourite', async () => {
+            const user = userEvent.setup()
+            renderSelector()
+
+            await user.click(screen.getByRole('button', { name: 'Add AAPL to favourites' }))
+
+            expect(screen.getByRole('button', { name: 'Remove AAPL from favourites' })).toHaveAttribute('aria-pressed', 'true')
+        })
+
+        it('follows the selected stock and exchange', async () => {
+            const user = userEvent.setup()
+            renderSelector()
+            await user.click(screen.getByRole('button', { name: 'Add AAPL to favourites' }))
+
+            await user.click(screen.getByLabelText(/Exchange/i))
+            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await user.type(getStockInput(), 'NOKIA')
+            await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
+
+            expect(screen.getByRole('button', { name: 'Add NOKIA to favourites' })).toHaveAttribute('aria-pressed', 'false')
+        })
     })
 
     describe('Initial Render', () => {
