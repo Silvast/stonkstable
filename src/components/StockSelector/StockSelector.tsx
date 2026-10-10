@@ -44,7 +44,6 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
       spacing={{ xs: 2, sm: 2 }}
       alignItems="flex-start"
     >
-      {/* Symbol and Exchange always stay together in one row */}
       <Stack
         direction="row"
         spacing={1}
@@ -66,7 +65,7 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
               if (option.Name.toLowerCase().includes(inputValue) ||
                 option.Code.toLowerCase().includes(inputValue)) {
                 result.push(option);
-                if (result.length >= MAX_OPTIONS) break; // Stop early once we have enough
+                if (result.length >= MAX_OPTIONS) break;
               }
             }
             return result;
@@ -122,7 +121,6 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
         </FormControl>
       </Stack>
 
-      {/* API Key moves to the right on tablet+ screens */}
       <TextField
         label="API Key"
         value={apiKey}

@@ -249,7 +249,6 @@ const StockTable = () => {
               alignItems="stretch"
               mb={1}
             >
-              {/* First group: Stock details and API Key */}
               <StockSelector loading={loading} />
 
               {/* Second group: Date picker and Submit button */}

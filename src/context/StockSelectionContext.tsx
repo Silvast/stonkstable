@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-// Import stock lists
 import heStocks from '../assets/he.json';
 import usStocks from '../assets/us.json';
 import lseStocks from '../assets/lse.json';
 
-// Define a type for the stock entries
 export interface StockEntry {
   Code: string;
   Name: string;
@@ -57,12 +55,10 @@ export const StockSelectionProvider = ({ children }: { children: React.ReactNode
     }
   }, []);
 
-  // Update stock options when exchange changes
   useEffect(() => {
     const stockList = STOCK_LISTS[exchange];
     setStockOptions(stockList);
 
-    // Find the currently selected stock in the new list if possible
     const found = stockList.find(stock => stock.Code === symbol);
     setSelectedStockState(found || null);
   }, [exchange, symbol]);

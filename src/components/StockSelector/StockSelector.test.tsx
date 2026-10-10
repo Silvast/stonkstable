@@ -8,7 +8,6 @@ import usStocks from '../../assets/us.json'
 
 const getStockInput = () => screen.getByRole('combobox', { name: /Stock Symbol/i })
 
-// Shows the shared selection so tests can assert what the selector wrote to it
 const SelectionProbe = () => {
     const { symbol, exchange, apiKey } = useStockSelection()
     return <output data-testid="selection">{`${symbol}.${exchange}|${apiKey}`}</output>
@@ -96,14 +95,12 @@ describe('StockSelector Component', () => {
             const user = userEvent.setup()
             renderSelector()
 
-            // US exchange has 50k+ stocks
             expect(usStocks.length).toBeGreaterThan(50000)
 
             const autocomplete = getStockInput()
             await user.clear(autocomplete)
             await user.click(autocomplete)
 
-            // Open dropdown with empty search (worst case scenario)
             const listbox = await screen.findByRole('listbox')
             const options = within(listbox).queryAllByRole('option')
             expect(options.length).toBe(100)
