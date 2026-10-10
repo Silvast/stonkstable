@@ -37,6 +37,12 @@ describe('BiasCard', () => {
         expect(items.map(item => item.textContent)).toEqual(['RSI 27, oversold', 'Above 20- and 50-day averages'])
     })
 
+    it('left-aligns its content so the global centred text does not apply', () => {
+        render(<BiasCard bias={{ score: 2, label: 'Leaning long', reasons: ['RSI 27, oversold'] }} />)
+
+        expect(screen.getByRole('heading', { name: 'Bias' }).parentElement).toHaveStyle({ textAlign: 'left' })
+    })
+
     it('shows a negative score with its sign', () => {
         render(<BiasCard bias={{ score: -3, label: 'Leaning short', reasons: [] }} />)
 

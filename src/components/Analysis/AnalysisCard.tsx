@@ -7,7 +7,7 @@ interface AnalysisCardProps {
 }
 
 const AnalysisCard = ({ title, children }: AnalysisCardProps) => (
-  <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%' }}>
+  <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%', textAlign: 'left' }}>
     <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>
       {title}
     </Typography>
