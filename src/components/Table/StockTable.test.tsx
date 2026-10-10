@@ -307,6 +307,12 @@ describe('StockTable Component', () => {
     })
 
     describe('Favourite star in the search header', () => {
+        it('does not nest the star button inside another button', () => {
+            render(<StockTable />)
+
+            expect(document.querySelectorAll('button button')).toHaveLength(0)
+        })
+
         it('toggles the favourite without collapsing the search panel', async () => {
             const user = userEvent.setup()
             localStorage.clear()

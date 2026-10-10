@@ -219,6 +219,7 @@ const StockTable = () => {
         }}
       >
         <AccordionSummary
+          component="div"
           expandIcon={<ExpandMoreIcon />}
           aria-controls="search-panel-content"
           id="search-panel-header"
