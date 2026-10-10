@@ -184,6 +184,25 @@ describe('StockTable Component', () => {
             await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
         })
 
+        it('fetches the chosen stock on the chosen exchange', async () => {
+            const user = userEvent.setup()
+            const fetchSpy = vi.fn((_url: string) => mockSuccessResponse(mockStockData))
+            vi.stubGlobal('fetch', fetchSpy)
+
+            render(<StockTable />)
+            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+
+            await user.click(screen.getByLabelText(/Exchange/i))
+            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            const stockInput = screen.getByRole('combobox', { name: /Stock Symbol/i })
+            await user.type(stockInput, 'NOKIA')
+            await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
+            await user.click(screen.getByRole('button', { name: /Fetch Data/i }))
+
+            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+            expect(fetchSpy.mock.calls[1][0]).toContain('/api/eodhd/eod/NOKIA.HE?')
+        })
+
         it('updates API key when changed', async () => {
             const user = userEvent.setup()
             render(<StockTable />)

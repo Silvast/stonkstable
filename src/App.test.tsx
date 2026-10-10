@@ -61,5 +61,22 @@ describe('App Component', () => {
             expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
         })
     })
-})
 
+    it('keeps the chosen stock and exchange when switching tabs', async () => {
+        const user = userEvent.setup()
+        render(<App />)
+
+        await user.click(screen.getByLabelText(/Exchange/i))
+        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        const stockInput = screen.getByRole('combobox', { name: /Stock Symbol/i })
+        await user.type(stockInput, 'NOKIA')
+        await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
+
+        await user.click(screen.getByRole('button', { name: /Analysis/i }))
+        await user.click(screen.getByRole('button', { name: /Stock Table/i }))
+
+        expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
+        expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('HE')
+        expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
+    })
+})
