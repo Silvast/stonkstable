@@ -11,6 +11,7 @@ import {
   Box
 } from '@mui/material'
 import { Analysis, StockTablePage } from './pages'
+import { StockSelectionProvider } from './context/StockSelectionContext'
 
 
 const theme = responsiveFontSizes(createTheme({
@@ -178,7 +179,9 @@ function App(): React.ReactElement {
             </Typography>
           </Box>
 
-          {currentPage === 'stock-table' ? <StockTablePage /> : <Analysis />}
+          <StockSelectionProvider>
+            {currentPage === 'stock-table' ? <StockTablePage /> : <Analysis />}
+          </StockSelectionProvider>
 
         </Container>
       </Box>

@@ -46,7 +46,7 @@ describe('App Component', () => {
         await user.click(analysisButton)
 
         expect(analysisButton).toHaveAttribute('aria-current', 'page')
-        expect(screen.getByText(/Content coming soon\./i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
         expect(screen.queryByText(/Stock Search Options/i)).not.toBeInTheDocument()
 
         // Buttons remain visible on Analysis page
@@ -61,5 +61,39 @@ describe('App Component', () => {
             expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
         })
     })
-})
 
+    it('keeps the chosen stock and exchange when switching tabs', async () => {
+        const user = userEvent.setup()
+        render(<App />)
+
+        await user.click(screen.getByLabelText(/Exchange/i))
+        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        const stockInput = screen.getByRole('combobox', { name: /Stock Symbol/i })
+        await user.type(stockInput, 'NOKIA')
+        await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
+
+        await user.click(screen.getByRole('button', { name: /Analysis/i }))
+        await user.click(screen.getByRole('button', { name: /Stock Table/i }))
+
+        expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
+        expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('HE')
+        expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
+    })
+
+    it('shows the stock picked on Stock Table on the Analysis page', async () => {
+        const user = userEvent.setup()
+        render(<App />)
+
+        await user.click(screen.getByLabelText(/Exchange/i))
+        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        await user.type(screen.getByRole('combobox', { name: /Stock Symbol/i }), 'NOKIA')
+        await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
+
+        await user.click(screen.getByRole('button', { name: /Analysis/i }))
+
+        expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
+        expect(screen.getByText(/NOKIA\.HE · Nokia Oyj/)).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: /Open in TradingView/i }))
+            .toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=OMXHEX%3ANOKIA')
+    })
+})

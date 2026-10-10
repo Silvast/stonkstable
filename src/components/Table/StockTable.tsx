@@ -10,21 +10,14 @@ import {
   Box,
   TableSortLabel,
   CircularProgress,
-  TextField,
   Button,
   Typography,
   Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   useMediaQuery,
   useTheme,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  Autocomplete
+  AccordionDetails
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -45,21 +38,8 @@ import {
   fetchStockDataFromApi
 } from '../../utils/stockTable';
 
-// Import stock lists
-import heStocks from '../../assets/he.json';
-import usStocks from '../../assets/us.json';
-import lseStocks from '../../assets/lse.json';
-
-// Define a type for the stock entries
-interface StockEntry {
-  Code: string;
-  Name: string;
-  Country: string;
-  Exchange: string;
-  Currency: string;
-  Type: string;
-  Isin: string | null;
-}
+import { useStockSelection } from '../../context/StockSelectionContext';
+import StockSelector from '../StockSelector/StockSelector';
 
 type ColumnId = keyof StockData | 'changePercent' | 'prevDayChangePercent';
 
@@ -102,44 +82,9 @@ const StockTable = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [symbol, setSymbol] = useState<string>('AAPL');
-  const [stockExchange, setStockExchange] = useState<string>('US');
-  const [apiKey, setApiKey] = useState<string>('');
+  const { symbol, exchange: stockExchange, apiKey } = useStockSelection();
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(20, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs().subtract(1, 'day'));
-  const [stockOptions, setStockOptions] = useState<StockEntry[]>(usStocks as StockEntry[]);
-  const [selectedStock, setSelectedStock] = useState<StockEntry | null>(() => {
-    const defaultStock = (usStocks as StockEntry[]).find(stock => stock.Code === 'AAPL');
-    return defaultStock || null;
-  });
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const apiKeyParam = urlParams.get('apikey');
-
-    if (apiKeyParam) {
-      setApiKey(apiKeyParam);
-    }
-  }, []);
-
-  // Update stock options when exchange changes
-  useEffect(() => {
-    let stockList: StockEntry[] = [];
-
-    if (stockExchange === 'US') {
-      stockList = usStocks as StockEntry[];
-    } else if (stockExchange === 'HE') {
-      stockList = heStocks as StockEntry[];
-    } else if (stockExchange === 'LSE') {
-      stockList = lseStocks as StockEntry[];
-    }
-
-    setStockOptions(stockList);
-
-    // Find the currently selected stock in the new list if possible
-    const found = stockList.find(stock => stock.Code === symbol);
-    setSelectedStock(found || null);
-  }, [stockExchange, symbol]);
 
   const fetchStockData = async () => {
     if (!startDate || !endDate) {
@@ -181,21 +126,6 @@ const StockTable = () => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
-  };
-
-  const handleStockChange = (_event: React.SyntheticEvent, newValue: StockEntry | null) => {
-    setSelectedStock(newValue);
-    if (newValue) {
-      setSymbol(newValue.Code);
-    }
-  };
-
-  const handleStockExchangeChange = (event: SelectChangeEvent) => {
-    setStockExchange(event.target.value as string);
-  };
-
-  const handleApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setApiKey(event.target.value);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -319,111 +249,7 @@ const StockTable = () => {
               alignItems="stretch"
               mb={1}
             >
-              {/* First group: Stock details and API Key */}
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={{ xs: 2, sm: 2 }}
-                alignItems="flex-start"
-              >
-                {/* Symbol and Exchange always stay together in one row */}
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="center"
-                  sx={{ width: { xs: '100%', sm: '60%', md: '40%' } }}
-                >
-                  <Autocomplete
-                    id="stock-symbol-autocomplete"
-                    options={stockOptions}
-                    getOptionLabel={(option) => `${option.Name} (${option.Code})`}
-                    value={selectedStock}
-                    onChange={handleStockChange}
-                    isOptionEqualToValue={(option, value) => option.Code === value.Code}
-                    filterOptions={(options, state) => {
-                      const inputValue = state.inputValue.toLowerCase();
-                      const MAX_OPTIONS = 100; // Limit results to prevent performance issues
-                      const result: StockEntry[] = [];
-                      for (const option of options) {
-                        if (option.Name.toLowerCase().includes(inputValue) ||
-                          option.Code.toLowerCase().includes(inputValue)) {
-                          result.push(option);
-                          if (result.length >= MAX_OPTIONS) break; // Stop early once we have enough
-                        }
-                      }
-                      return result;
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Stock Symbol"
-                        variant="outlined"
-                        size="small"
-                        aria-label="Search for a stock by name or symbol"
-                        sx={{
-                          flexGrow: 1,
-                          minWidth: 80,
-                          '& .MuiInputLabel-root': {
-                            fontSize: { xs: '0.9rem', sm: 'inherit' }
-                          },
-                          '& .MuiInputBase-input': {
-                            fontSize: { xs: '0.9rem', sm: 'inherit' }
-                          }
-                        }}
-                      />
-                    )}
-                    sx={{ flexGrow: 1 }}
-                    loading={loading}
-                    loadingText="Loading stocks..."
-                    noOptionsText="No stocks found"
-                  />
-
-                  <FormControl
-                    size="small"
-                    sx={{
-                      width: { xs: 110, sm: 120 },
-                      '& .MuiInputLabel-root': {
-                        fontSize: { xs: '0.9rem', sm: 'inherit' }
-                      },
-                      '& .MuiSelect-select': {
-                        fontSize: { xs: '0.9rem', sm: 'inherit' }
-                      }
-                    }}
-                  >
-                    <InputLabel id="stock-exchange-label">Exchange</InputLabel>
-                    <Select
-                      labelId="stock-exchange-label"
-                      value={stockExchange}
-                      label="Exchange"
-                      onChange={handleStockExchangeChange}
-                    >
-                      <MenuItem value="US">US</MenuItem>
-                      <MenuItem value="HE">HE</MenuItem>
-                      <MenuItem value="LSE">LSE</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Stack>
-
-                {/* API Key moves to the right on tablet+ screens */}
-                <TextField
-                  label="API Key"
-                  value={apiKey}
-                  onChange={handleApiKeyChange}
-                  placeholder="Optional (defaults to 'demo')"
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  sx={{
-                    flexGrow: 1,
-                    width: { xs: '100%', sm: '40%', md: '60%' },
-                    '& .MuiInputLabel-root': {
-                      fontSize: { xs: '0.9rem', sm: 'inherit' }
-                    },
-                    '& .MuiInputBase-input': {
-                      fontSize: { xs: '0.9rem', sm: 'inherit' }
-                    }
-                  }}
-                />
-              </Stack>
+              <StockSelector loading={loading} />
 
               {/* Second group: Date picker and Submit button */}
               <Stack
