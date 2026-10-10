@@ -1,13 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { render, screen, waitFor } from './test/utils/testHelpers'
+import { render as renderWithoutTestProviders } from '@testing-library/react'
 import App from './App'
 import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
+import { saveFavourites } from './utils/favouritesStorage'
 
 describe('App Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        localStorage.clear()
         vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
+    })
+
+    it('provides its own contexts so it renders without the test providers', () => {
+        renderWithoutTestProviders(<App />)
+
+        expect(screen.getAllByRole('button', { name: 'Add AAPL to favourites' }).length).toBeGreaterThan(0)
     })
 
     it('renders navigation buttons at the top', () => {
@@ -95,5 +104,45 @@ describe('App Component', () => {
         expect(screen.getByText(/NOKIA\.HE · Nokia Oyj/)).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Open in TradingView/i }))
             .toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=OMXHEX%3ANOKIA')
+    })
+
+    describe('Favourites', () => {
+        const favouritesNav = () => screen.getByRole('button', { name: /^Favourites/ })
+
+        it('has a Favourites nav button whose count follows the starred stocks', async () => {
+            const user = userEvent.setup()
+            render(<App />)
+
+            expect(favouritesNav()).toHaveTextContent(/^Favourites$/)
+
+            await user.click(screen.getAllByRole('button', { name: 'Add AAPL to favourites' })[0])
+
+            expect(favouritesNav()).toHaveTextContent(/^Favourites1$/)
+        })
+
+        it('lists a stock starred on Stock Table', async () => {
+            const user = userEvent.setup()
+            render(<App />)
+
+            await user.click(screen.getAllByRole('button', { name: 'Add AAPL to favourites' })[0])
+            await user.click(favouritesNav())
+
+            expect(favouritesNav()).toHaveAttribute('aria-current', 'page')
+            expect(screen.getByRole('heading', { name: 'Favourites' })).toBeInTheDocument()
+            expect(screen.getByRole('row', { name: /Apple Inc/ })).toBeInTheDocument()
+        })
+
+        it('opens a favourite from another exchange in Stock Table', async () => {
+            const user = userEvent.setup()
+            saveFavourites([{ code: 'NOKIA', exchange: 'HE', name: 'Nokia Oyj', currency: 'EUR', addedAt: '2026-10-08T08:00:00.000Z' }])
+            render(<App />)
+
+            await user.click(favouritesNav())
+            await user.click(screen.getByRole('button', { name: 'Show NOKIA in Stock Table' }))
+
+            expect(screen.getByRole('button', { name: /^Stock Table$/ })).toHaveAttribute('aria-current', 'page')
+            expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
+            expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
+        })
     })
 })

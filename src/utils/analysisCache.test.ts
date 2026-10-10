@@ -87,6 +87,14 @@ describe('analysisCache', () => {
         expect(Object.keys(localStorage)).toEqual(['stonkstable:analysis:v1:NOKIA.HE:2026-10-10'])
     })
 
+    it('pruneCache never removes the favourites key', () => {
+        localStorage.setItem('stonkstable:favourites:v1', '{"version":1,"items":[]}')
+
+        pruneCache()
+
+        expect(localStorage.getItem('stonkstable:favourites:v1')).toBe('{"version":1,"items":[]}')
+    })
+
     it('treats unreadable JSON as a miss', () => {
         localStorage.setItem('stonkstable:analysis:v1:AAPL.US:2026-10-10', 'not json')
 

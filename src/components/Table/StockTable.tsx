@@ -40,6 +40,7 @@ import {
 
 import { useStockSelection } from '../../context/StockSelectionContext';
 import StockSelector from '../StockSelector/StockSelector';
+import FavouriteToggle from '../Favourites/FavouriteToggle';
 
 type ColumnId = keyof StockData | 'changePercent' | 'prevDayChangePercent';
 
@@ -82,7 +83,7 @@ const StockTable = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { symbol, exchange: stockExchange, apiKey } = useStockSelection();
+  const { symbol, exchange: stockExchange, apiKey, selectedStock } = useStockSelection();
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(20, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs().subtract(1, 'day'));
 
@@ -218,6 +219,7 @@ const StockTable = () => {
         }}
       >
         <AccordionSummary
+          component="div"
           expandIcon={<ExpandMoreIcon />}
           aria-controls="search-panel-content"
           id="search-panel-header"
@@ -239,6 +241,7 @@ const StockTable = () => {
             >
               {isXsScreen ? 'Search' : 'Stock Search Options'} {symbol && `(${symbol}.${stockExchange})`}
             </Typography>
+            <FavouriteToggle stock={selectedStock} exchange={stockExchange} size="small" stopPropagation />
           </Stack>
         </AccordionSummary>
         <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>

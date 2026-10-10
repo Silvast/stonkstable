@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { StockSelectionProvider } from '../../context/StockSelectionContext'
+import { FavouritesProvider } from '../../context/FavouritesContext'
 
 const theme = responsiveFontSizes(createTheme({
     breakpoints: {
@@ -37,7 +38,9 @@ const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
         <ThemeProvider theme={theme}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <StockSelectionProvider>
-                    {children}
+                    <FavouritesProvider>
+                        {children}
+                    </FavouritesProvider>
                 </StockSelectionProvider>
             </LocalizationProvider>
         </ThemeProvider>

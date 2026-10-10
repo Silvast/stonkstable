@@ -10,8 +10,10 @@ import {
   responsiveFontSizes,
   Box
 } from '@mui/material'
-import { Analysis, StockTablePage } from './pages'
+import { Analysis, Favourites, StockTablePage } from './pages'
 import { StockSelectionProvider } from './context/StockSelectionContext'
+import { FavouritesProvider, useFavourites } from './context/FavouritesContext'
+import StarIcon from '@mui/icons-material/Star'
 
 
 const theme = responsiveFontSizes(createTheme({
@@ -61,130 +63,148 @@ const theme = responsiveFontSizes(createTheme({
   },
 }));
 
+type Page = 'stock-table' | 'analysis' | 'favourites'
+
+interface NavButtonProps {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}
+
+function NavButton({ active, onClick, children }: NavButtonProps): React.ReactElement {
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  return (
+    <Button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      variant="text"
+      size={isMobile ? 'small' : 'medium'}
+      sx={{
+        justifyContent: 'flex-start',
+        borderRadius: 1,
+        px: 1,
+        py: 0.75,
+        textTransform: 'none',
+        whiteSpace: 'nowrap',
+        minWidth: 'fit-content',
+        color: active ? 'primary.main' : 'text.secondary',
+        bgcolor: active ? 'action.hover' : 'transparent',
+        border: '1px solid',
+        borderColor: active ? 'primary.main' : 'divider',
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
+      {children}
+    </Button>
+  )
+}
+
+function FavouritesNavLabel(): React.ReactElement {
+  const { favourites } = useFavourites()
+
+  return (
+    <>
+      <StarIcon fontSize="small" sx={{ mr: 0.5 }} />
+      Favourites
+      {favourites.length > 0 && (
+        <Box component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>{favourites.length}</Box>
+      )}
+    </>
+  )
+}
+
 function App(): React.ReactElement {
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [currentPage, setCurrentPage] = useState<'stock-table' | 'analysis'>('stock-table');
+  const [currentPage, setCurrentPage] = useState<Page>('stock-table');
 
   return (
     <ThemeProvider theme={theme}>
-      <Box
-        sx={{
-          bgcolor: 'background.default',
-          minHeight: '100vh',
-          pt: { xs: 3, sm: 4 },
-          width: '100%',
-        }}
-      >
-        <Container
-          maxWidth="xl"
-          disableGutters={false}
-          sx={{
-            width: { xs: '100%', lg: '90%' },
-            maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
-            px: { xs: 2, sm: 3, md: 4 },
-            mx: 'auto',
-          }}
-        >
-          {/* Minimal Header */}
+      <StockSelectionProvider>
+        <FavouritesProvider>
           <Box
             sx={{
-              mb: { xs: 3, sm: 4 },
-              pb: { xs: 2, sm: 3 },
-              borderBottom: '1px solid',
-              borderColor: 'divider',
+              bgcolor: 'background.default',
+              minHeight: '100vh',
+              pt: { xs: 3, sm: 4 },
               width: '100%',
             }}
           >
-            {/* Navigation (top) */}
-            <Box
+            <Container
+              maxWidth="xl"
+              disableGutters={false}
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
-                gap: 1,
-                mb: { xs: 2, sm: 2.5 },
-                alignItems: { xs: 'stretch', sm: 'center' },
-                justifyContent: 'flex-start',
-                width: '100%',
+                width: { xs: '100%', lg: '90%' },
+                maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
+                px: { xs: 2, sm: 3, md: 4 },
+                mx: 'auto',
               }}
             >
-              <Button
-                type="button"
-                onClick={() => setCurrentPage('stock-table')}
-                aria-current={currentPage === 'stock-table' ? 'page' : undefined}
-                variant="text"
-                size={isMobile ? 'small' : 'medium'}
+              {/* Minimal Header */}
+              <Box
                 sx={{
-                  justifyContent: 'flex-start',
-                  borderRadius: 1,
-                  px: 1,
-                  py: 0.75,
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  minWidth: 'fit-content',
-                  color: currentPage === 'stock-table' ? 'primary.main' : 'text.secondary',
-                  bgcolor: currentPage === 'stock-table' ? 'action.hover' : 'transparent',
-                  border: '1px solid',
-                  borderColor: currentPage === 'stock-table' ? 'primary.main' : 'divider',
-                  '&:hover': { bgcolor: 'action.hover' },
+                  mb: { xs: 3, sm: 4 },
+                  pb: { xs: 2, sm: 3 },
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  width: '100%',
                 }}
               >
-                Stock Table
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setCurrentPage('analysis')}
-                aria-current={currentPage === 'analysis' ? 'page' : undefined}
-                variant="text"
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  justifyContent: 'flex-start',
-                  borderRadius: 1,
-                  px: 1,
-                  py: 0.75,
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  minWidth: 'fit-content',
-                  color: currentPage === 'analysis' ? 'primary.main' : 'text.secondary',
-                  bgcolor: currentPage === 'analysis' ? 'action.hover' : 'transparent',
-                  border: '1px solid',
-                  borderColor: currentPage === 'analysis' ? 'primary.main' : 'divider',
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-              >
-                Analysis
-              </Button>
-            </Box>
+                {/* Navigation (top) */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 1,
+                    mb: { xs: 2, sm: 2.5 },
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    justifyContent: 'flex-start',
+                    width: '100%',
+                  }}
+                >
+                  <NavButton active={currentPage === 'stock-table'} onClick={() => setCurrentPage('stock-table')}>
+                    Stock Table
+                  </NavButton>
+                  <NavButton active={currentPage === 'analysis'} onClick={() => setCurrentPage('analysis')}>
+                    Analysis
+                  </NavButton>
+                  <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
+                    <FavouritesNavLabel />
+                  </NavButton>
+                </Box>
 
-            <Typography
-              variant="h6"
-              component="h1"
-              sx={{
-                color: 'text.primary',
-                fontWeight: 400,
-                mb: 0.5,
-                fontSize: { xs: '1.1rem', sm: '1.25rem' }
-              }}
-            >
-              Stonksei taulukkona
-            </Typography>
-            <Typography
-              variant="body2"
-              component="p"
-              sx={{
-                color: 'text.secondary',
-                fontSize: { xs: '0.813rem', sm: '0.875rem' }
-              }}
-            >
-              Viimeisen 20 päivän osakekurssit
-            </Typography>
+                <Typography
+                  variant="h6"
+                  component="h1"
+                  sx={{
+                    color: 'text.primary',
+                    fontWeight: 400,
+                    mb: 0.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                  }}
+                >
+                  Stonksei taulukkona
+                </Typography>
+                <Typography
+                  variant="body2"
+                  component="p"
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: { xs: '0.813rem', sm: '0.875rem' }
+                  }}
+                >
+                  Viimeisen 20 päivän osakekurssit
+                </Typography>
+              </Box>
+
+              {currentPage === 'stock-table' && <StockTablePage />}
+              {currentPage === 'analysis' && <Analysis />}
+              {currentPage === 'favourites' && <Favourites onOpen={setCurrentPage} />}
+
+            </Container>
           </Box>
-
-          <StockSelectionProvider>
-            {currentPage === 'stock-table' ? <StockTablePage /> : <Analysis />}
-          </StockSelectionProvider>
-
-        </Container>
-      </Box>
+        </FavouritesProvider>
+      </StockSelectionProvider>
     </ThemeProvider>
   )
 }

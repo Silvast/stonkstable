@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Autocomplete,
+  Box,
   FormControl,
   InputLabel,
   MenuItem,
@@ -10,6 +11,12 @@ import {
   TextField
 } from '@mui/material';
 import { ExchangeCode, StockEntry, useStockSelection } from '../../context/StockSelectionContext';
+import { useFavourites } from '../../context/FavouritesContext';
+import FavouriteToggle from '../Favourites/FavouriteToggle';
+
+const MAX_OPTIONS = 100; // Limit results to prevent performance issues
+
+const optionLabel = (option: StockEntry) => `${option.Name} (${option.Code})`;
 
 interface StockSelectorProps {
   loading?: boolean;
@@ -25,6 +32,30 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
     setApiKey,
     setSelectedStock
   } = useStockSelection();
+  const { favourites, isFavourite } = useFavourites();
+
+  const optionsByCode = useMemo(
+    () => new Map(stockOptions.map(option => [option.Code, option])),
+    [stockOptions]
+  );
+
+  const filterOptions = (options: StockEntry[], { inputValue }: { inputValue: string }) => {
+    const input = inputValue.toLowerCase();
+    const matches = (option: StockEntry) =>
+      option.Name.toLowerCase().includes(input) || option.Code.toLowerCase().includes(input);
+
+    const result = favourites
+      .filter(fav => fav.exchange === exchange)
+      .map(fav => optionsByCode.get(fav.code))
+      .filter((option): option is StockEntry => !!option && matches(option))
+      .slice(0, MAX_OPTIONS);
+
+    for (const option of options) {
+      if (result.length >= MAX_OPTIONS) break;
+      if (matches(option) && !isFavourite(option.Code, exchange)) result.push(option);
+    }
+    return result;
+  };
 
   const handleStockChange = (_event: React.SyntheticEvent, newValue: StockEntry | null) => {
     setSelectedStock(newValue);
@@ -53,22 +84,22 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
         <Autocomplete
           id="stock-symbol-autocomplete"
           options={stockOptions}
-          getOptionLabel={(option) => `${option.Name} (${option.Code})`}
+          getOptionLabel={optionLabel}
           value={selectedStock}
           onChange={handleStockChange}
           isOptionEqualToValue={(option, value) => option.Code === value.Code}
-          filterOptions={(options, state) => {
-            const inputValue = state.inputValue.toLowerCase();
-            const MAX_OPTIONS = 100; // Limit results to prevent performance issues
-            const result: StockEntry[] = [];
-            for (const option of options) {
-              if (option.Name.toLowerCase().includes(inputValue) ||
-                option.Code.toLowerCase().includes(inputValue)) {
-                result.push(option);
-                if (result.length >= MAX_OPTIONS) break;
-              }
-            }
-            return result;
+          filterOptions={filterOptions}
+          groupBy={(option) => (isFavourite(option.Code, exchange) ? 'Favourites' : 'All stocks')}
+          renderOption={(props, option) => {
+            const { key: _key, ...optionProps } = props as typeof props & { key: string };
+            return (
+              <Box component="li" key={option.Code} {...optionProps}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                  <span>{optionLabel(option)}</span>
+                  <FavouriteToggle stock={option} exchange={exchange} size="small" stopPropagation />
+                </Box>
+              </Box>
+            );
           }}
           renderInput={(params) => (
             <TextField
@@ -119,6 +150,8 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
             <MenuItem value="LSE">LSE</MenuItem>
           </Select>
         </FormControl>
+
+        <FavouriteToggle stock={selectedStock} exchange={exchange} />
       </Stack>
 
       <TextField
