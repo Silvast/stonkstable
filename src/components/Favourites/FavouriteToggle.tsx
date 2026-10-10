@@ -20,6 +20,12 @@ const FavouriteToggle = ({ stock, exchange, size = 'medium', stopPropagation = f
     if (stopPropagation) event.stopPropagation();
   };
 
+  const handleMouseDown = (event: React.MouseEvent) => {
+    if (!stopPropagation) return;
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
   const handleClick = (event: React.MouseEvent) => {
     stop(event);
     if (stock) toggleFavourite(stock, exchange);
@@ -38,7 +44,7 @@ const FavouriteToggle = ({ stock, exchange, size = 'medium', stopPropagation = f
           aria-pressed={isFav}
           disabled={stock === null}
           onClick={handleClick}
-          onMouseDown={stop}
+          onMouseDown={handleMouseDown}
           onFocus={stop}
         >
           {isFav
