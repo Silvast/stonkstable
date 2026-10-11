@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { render, screen, waitFor } from './test/utils/testHelpers'
+import { render, screen, waitFor, within } from './test/utils/testHelpers'
 import { render as renderWithoutTestProviders } from '@testing-library/react'
 import App from './App'
 import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
@@ -22,19 +22,48 @@ describe('App Component', () => {
     it('hides sign-in when no backend is configured', () => {
         render(<App />)
 
-        expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Sign in/ })).not.toBeInTheDocument()
     })
 
-    it('renders navigation buttons at the top', () => {
+    it('shows the Stonkstable sidebar with the section nav', () => {
         render(<App />)
-        expect(screen.getByRole('button', { name: /Stock Table/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /Analysis/i })).toBeInTheDocument()
+
+        const sidebar = screen.getByRole('complementary')
+        expect(within(sidebar).getByText('Stonkstable')).toBeInTheDocument()
+        const nav = within(sidebar).getByRole('navigation', { name: 'Sections' })
+        expect(within(nav).getAllByRole('button').map(button => button.textContent)).toEqual([
+            'Stock table', 'Analysis', 'Favourites',
+        ])
+        expect(within(nav).getByRole('button', { name: 'Stock table' })).toHaveAttribute('aria-current', 'page')
     })
 
-    it('renders title and subtitle', () => {
+    it('no longer shows the old page header', () => {
         render(<App />)
-        expect(screen.getByRole('heading', { name: /Stonksei taulukkona/i })).toBeInTheDocument()
-        expect(screen.getByText(/Viimeisen 20 päivän osakekurssit/i)).toBeInTheDocument()
+
+        expect(screen.queryByText(/Stonksei taulukkona/i)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Viimeisen 20 päivän osakekurssit/i)).not.toBeInTheDocument()
+    })
+
+    it('opens the navigation from a menu button on narrow screens', async () => {
+        const user = userEvent.setup()
+        const matchMedia = window.matchMedia
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+            ...matchMedia(query),
+            matches: query.includes('max-width:959.95px'),
+        }))
+        try {
+            render(<App />)
+
+            expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+            await user.click(screen.getByRole('button', { name: 'Open navigation' }))
+            const nav = await screen.findByRole('navigation', { name: 'Sections' })
+            await user.click(within(nav).getByRole('button', { name: 'Analysis' }))
+
+            expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
+            await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Sections' })).not.toBeInTheDocument())
+        } finally {
+            window.matchMedia = matchMedia
+        }
     })
 
     it('defaults to Stock Table page', async () => {
@@ -146,7 +175,7 @@ describe('App Component', () => {
             await user.click(favouritesNav())
             await user.click(screen.getByRole('button', { name: 'Show NOKIA in Stock Table' }))
 
-            expect(screen.getByRole('button', { name: /^Stock Table$/ })).toHaveAttribute('aria-current', 'page')
+            expect(screen.getByRole('button', { name: /^Stock table$/ })).toHaveAttribute('aria-current', 'page')
             expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
             expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
         })

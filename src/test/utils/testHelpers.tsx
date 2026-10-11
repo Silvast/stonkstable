@@ -1,34 +1,12 @@
 import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material'
+import { ThemeProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { StockSelectionProvider } from '../../context/StockSelectionContext'
 import { FavouritesProvider } from '../../context/FavouritesContext'
 import { AuthProvider } from '../../context/AuthContext'
-
-const theme = responsiveFontSizes(createTheme({
-    breakpoints: {
-        values: {
-            xs: 0,
-            sm: 600,
-            md: 960,
-            lg: 1280,
-            xl: 1920,
-        },
-    },
-    components: {
-        MuiContainer: {
-            styleOverrides: {
-                maxWidthXl: {
-                    maxWidth: '90% !important',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                },
-            },
-        },
-    },
-}))
+import { theme } from '../../theme'
 
 interface AllTheProvidersProps {
     children: React.ReactNode
