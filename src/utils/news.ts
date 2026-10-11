@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { recordApiCalls } from './apiUsage';
 
 export interface NewsSentiment {
   polarity: number;
@@ -36,6 +37,7 @@ export const fetchNewsFromApi = async (
     const fullSymbol = encodeURIComponent(`${symbol}.${exchange}`);
     const apiUrl = `/api/eodhd/news?s=${fullSymbol}&from=${from.format('YYYY-MM-DD')}&limit=10&offset=0&api_token=${token}&fmt=json`;
 
+    recordApiCalls(5);
     const response = await fetch(apiUrl);
 
     if (!response.ok) {

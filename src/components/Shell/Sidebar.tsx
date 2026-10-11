@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { Avatar, Box, Button, ButtonBase, Menu, MenuItem, Typography } from '@mui/material';
+import { Avatar, Box, Button, ButtonBase, LinearProgress, Typography } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
@@ -9,9 +9,12 @@ import { useFavourites } from '../../context/FavouritesContext';
 import { useStockSelection } from '../../context/StockSelectionContext';
 import { ToneChip, Tone } from '../common/Chips';
 import { BiasShortLabel, FavouriteSnapshot, favouriteSnapshot } from '../../utils/favouriteSnapshot';
+import { DAILY_CALL_BUDGET } from '../../utils/apiUsage';
+import { useApiCallsToday } from '../../hooks/useApiCallsToday';
+import ApiKeyDialog from '../Account/ApiKeyDialog';
 import { mono, tokens } from '../../theme';
 
-export type Page = 'stock-table' | 'analysis' | 'favourites';
+export type Page = 'stock-table' | 'analysis' | 'favourites' | 'settings';
 
 interface SidebarProps {
   currentPage: Page;
@@ -86,13 +89,29 @@ const NavItem = ({ icon, label, active, onClick, badge }: NavItemProps) => (
   </ButtonBase>
 );
 
-const AccountCard = () => {
-  const { status, email, signOut, openSignIn } = useAuth();
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+const UsageMeter = () => {
+  const calls = useApiCallsToday();
 
-  if (status !== 'signedIn' && status !== 'signedOut') return null;
+  return (
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+        <Box component="span" sx={{ color: tokens.textSecondary }}>API calls today</Box>
+        <Box component="span" sx={mono}>{`${calls} / ${DAILY_CALL_BUDGET}`}</Box>
+      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={Math.min(100, (calls / DAILY_CALL_BUDGET) * 100)}
+        aria-label="API calls today"
+        sx={{ height: 6, borderRadius: 3, bgcolor: tokens.neutralChip }}
+      />
+    </>
+  );
+};
 
-  const closeMenu = () => setMenuAnchor(null);
+const AccountCard = ({ currentPage, onNavigate }: SidebarProps) => {
+  const { status, email, openSignIn } = useAuth();
+  const [keyDialogOpen, setKeyDialogOpen] = useState(false);
+  const onSettings = currentPage === 'settings';
 
   return (
     <Box
@@ -106,63 +125,54 @@ const AccountCard = () => {
         borderRadius: '10px',
       }}
     >
-      {status === 'signedOut' ? (
+      <UsageMeter />
+      {status !== 'signedIn' && (
+        <>
+          <Button variant="outlined" onClick={() => setKeyDialogOpen(true)} sx={{ borderRadius: '8px', fontSize: 13 }}>
+            API key settings
+          </Button>
+          <ApiKeyDialog open={keyDialogOpen} onClose={() => setKeyDialogOpen(false)} />
+        </>
+      )}
+      {status === 'signedOut' && (
         <Button
           variant="contained"
           onClick={openSignIn}
-          sx={{ bgcolor: tokens.ink, borderRadius: '8px', '&:hover': { bgcolor: '#000000' } }}
+          sx={{ bgcolor: tokens.ink, borderRadius: '8px', fontSize: 13, '&:hover': { bgcolor: '#000000' } }}
         >
           Sign in to sync
         </Button>
-      ) : (
-        <>
-          <ButtonBase
-            onClick={(event) => setMenuAnchor(event.currentTarget)}
-            aria-haspopup="menu"
-            aria-expanded={menuAnchor ? 'true' : undefined}
-            aria-controls={menuAnchor ? 'account-menu' : undefined}
-            sx={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              gap: 1.25,
-              minHeight: 44,
-              px: 1,
-              borderRadius: '8px',
-              textAlign: 'left',
-              '&:hover': { bgcolor: tokens.ground },
-            }}
-          >
-            <Avatar sx={{ width: 30, height: 30, bgcolor: tokens.primary, fontSize: 13, fontWeight: 600 }}>
-              {(email ?? '?').charAt(0).toUpperCase()}
-            </Avatar>
-            <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2 }}>
-              <Typography component="span" sx={{ fontWeight: 600, fontSize: 13 }}>Signed in</Typography>
-              <Typography
-                component="span"
-                sx={{ fontSize: 12, color: tokens.textIdle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              >
-                {email ?? 'Account'}
-              </Typography>
-            </Box>
-          </ButtonBase>
-          <Menu
-            id="account-menu"
-            anchorEl={menuAnchor}
-            open={menuAnchor !== null}
-            onClose={closeMenu}
-            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-          >
-            <MenuItem
-              onClick={() => {
-                closeMenu();
-                signOut();
-              }}
+      )}
+      {status === 'signedIn' && (
+        <ButtonBase
+          onClick={() => onNavigate('settings')}
+          aria-current={onSettings ? 'page' : undefined}
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            gap: 1.25,
+            minHeight: 44,
+            px: 1,
+            borderRadius: '8px',
+            textAlign: 'left',
+            color: onSettings ? tokens.primaryDark : tokens.text,
+            bgcolor: onSettings ? tokens.primaryTint : 'transparent',
+            '&:hover': { bgcolor: onSettings ? tokens.primaryTint : tokens.ground },
+          }}
+        >
+          <Avatar sx={{ width: 30, height: 30, bgcolor: tokens.primary, fontSize: 13, fontWeight: 600 }}>
+            {(email ?? '?').charAt(0).toUpperCase()}
+          </Avatar>
+          <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2 }}>
+            <Typography
+              component="span"
+              sx={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
-              Sign out
-            </MenuItem>
-          </Menu>
-        </>
+              {email ?? 'Signed in'}
+            </Typography>
+            <Typography component="span" sx={{ fontSize: 12, color: tokens.textIdle }}>Settings</Typography>
+          </Box>
+        </ButtonBase>
       )}
     </Box>
   );
@@ -197,7 +207,7 @@ const Watchlist = ({ page }: { page: Page }) => {
   const { favourites } = useFavourites();
   const { symbol, exchange, setExchange, setSymbol } = useStockSelection();
 
-  if (page === 'favourites' || favourites.length === 0) return null;
+  if ((page !== 'stock-table' && page !== 'analysis') || favourites.length === 0) return null;
 
   return (
     <Box component="section" aria-labelledby={headingId}>
@@ -289,7 +299,7 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
         />
       </Box>
       <Watchlist page={currentPage} />
-      <AccountCard />
+      <AccountCard currentPage={currentPage} onNavigate={onNavigate} />
     </Box>
   );
 };

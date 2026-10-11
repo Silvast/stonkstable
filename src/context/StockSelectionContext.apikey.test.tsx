@@ -69,6 +69,16 @@ describe('StockSelectionContext API key', () => {
             expect(result.current.apiKey).toBe('link-key')
         })
 
+        it('removes ?apikey= from the address bar but keeps other parameters', () => {
+            window.history.replaceState({}, '', '/?apikey=link-key&tab=analysis')
+
+            const { result } = renderSelection()
+
+            expect(result.current.apiKey).toBe('link-key')
+            expect(window.location.search).toBe('?tab=analysis')
+            expect(cloud.saveCloudApiKey).not.toHaveBeenCalled()
+        })
+
         it('does not remember keys unless asked', () => {
             const { result } = renderSelection()
 
@@ -137,6 +147,26 @@ describe('StockSelectionContext API key', () => {
 
             await act(async () => {})
             expect(result.current.apiKey).toBe(expected)
+        })
+
+        it('saves a key from a ?apikey= link to the account', async () => {
+            window.history.replaceState({}, '', '/?apikey=link-key')
+
+            renderSelection()
+
+            await waitFor(() => expect(cloud.saveCloudApiKey).toHaveBeenCalledWith('link-key'))
+            expect(cloud.saveCloudApiKey).toHaveBeenCalledTimes(1)
+            expect(window.location.search).toBe('')
+        })
+
+        it('saves a link key once the user signs in', async () => {
+            authState.initial = 'signedOut'
+            window.history.replaceState({}, '', '/?apikey=link-key')
+            renderSelection()
+
+            act(() => authState.setStatus('signedIn'))
+
+            await waitFor(() => expect(cloud.saveCloudApiKey).toHaveBeenCalledWith('link-key'))
         })
 
         it('keeps a key typed while the account key was loading', async () => {

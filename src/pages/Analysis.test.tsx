@@ -118,7 +118,7 @@ describe('Analysis page', () => {
         await user.click(analyzeButton())
 
         expect(await screen.findByText('Failed to load stock data. Please try again later.')).toBeInTheDocument()
-        expect(localStorage.length).toBe(0)
+        expect(Object.keys(localStorage).filter(key => key.startsWith('stonkstable:analysis:'))).toEqual([])
         for (const name of CARD_HEADINGS) {
             expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument()
         }

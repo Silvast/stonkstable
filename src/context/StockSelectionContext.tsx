@@ -69,6 +69,7 @@ export const StockSelectionProvider = ({ children }: { children: React.ReactNode
   const rememberRef = useRef(rememberOnDevice);
   const signedInRef = useRef(signedIn);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const linkKeySaved = useRef(false);
   const [stockOptions, setStockOptions] = useState<StockEntry[]>(STOCK_LISTS.US);
   const [selectedStock, setSelectedStockState] = useState<StockEntry | null>(() => {
     const defaultStock = STOCK_LISTS.US.find(stock => stock.Code === 'AAPL');
@@ -90,6 +91,11 @@ export const StockSelectionProvider = ({ children }: { children: React.ReactNode
       return;
     }
 
+    if (keySource.current === 'link' && !linkKeySaved.current) {
+      linkKeySaved.current = true;
+      saveCloudApiKey(apiKeyRef.current).catch(() => setApiKeySaveError(SAVE_ERROR));
+      return;
+    }
     if (keySource.current !== 'none') return;
     let active = true;
     loadCloudApiKey()
@@ -103,6 +109,13 @@ export const StockSelectionProvider = ({ children }: { children: React.ReactNode
   }, [signedIn, applyApiKey]);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
+
+  useEffect(() => {
+    if (initialKey.source !== 'link') return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('apikey');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [initialKey.source]);
 
   const setApiKey = useCallback((key: string) => {
     applyApiKey(key, 'typed');

@@ -98,13 +98,14 @@ describe('App sign-in', () => {
         expect(screen.queryByRole('button', { name: 'Sign in to sync' })).not.toBeInTheDocument()
     })
 
-    it('signs out from the account menu', async () => {
+    it('opens Settings from the signed-in row and signs out there', async () => {
         const user = userEvent.setup()
         signedInAs('ansku@example.com')
         render(<App />)
 
         await user.click(await screen.findByRole('button', { name: /ansku@example\.com/ }))
-        await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+        expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
         expect(auth.signOut).toHaveBeenCalled()
     })

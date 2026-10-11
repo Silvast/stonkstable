@@ -1,6 +1,7 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import { tokens } from '../theme';
+import { recordApiCalls } from './apiUsage';
 
 export type Order = 'asc' | 'desc';
 
@@ -171,6 +172,7 @@ export const fetchStockDataFromApi = async (
     
     const apiUrl = `/api/eodhd/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
     
+    recordApiCalls(1);
     const response = await fetch(apiUrl);
     
     if (!response.ok) {
