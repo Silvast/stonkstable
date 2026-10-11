@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import type { ButtonProps } from '@mui/material'
 import './App.css'
 import {
   Button,
@@ -8,13 +9,17 @@ import {
   createTheme,
   ThemeProvider,
   responsiveFontSizes,
-  Box
+  Box,
+  Menu,
+  MenuItem
 } from '@mui/material'
 import { Analysis, Favourites, StockTablePage } from './pages'
 import { StockSelectionProvider } from './context/StockSelectionContext'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { FavouritesProvider, useFavourites } from './context/FavouritesContext'
 import StarIcon from '@mui/icons-material/Star'
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
+import SignInDialog from './components/Account/SignInDialog'
 
 
 const theme = responsiveFontSizes(createTheme({
@@ -66,23 +71,23 @@ const theme = responsiveFontSizes(createTheme({
 
 type Page = 'stock-table' | 'analysis' | 'favourites'
 
-interface NavButtonProps {
+interface NavButtonProps extends Omit<ButtonProps, 'onClick'> {
   active: boolean
-  onClick: () => void
-  children: React.ReactNode
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
 }
 
-function NavButton({ active, onClick, children }: NavButtonProps): React.ReactElement {
+function NavButton({ active, onClick, children, sx, ...buttonProps }: NavButtonProps): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   return (
     <Button
+      {...buttonProps}
       type="button"
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       variant="text"
       size={isMobile ? 'small' : 'medium'}
-      sx={{
+      sx={[{
         justifyContent: 'flex-start',
         borderRadius: 1,
         px: 1,
@@ -95,7 +100,7 @@ function NavButton({ active, onClick, children }: NavButtonProps): React.ReactEl
         border: '1px solid',
         borderColor: active ? 'primary.main' : 'divider',
         '&:hover': { bgcolor: 'action.hover' },
-      }}
+      }, ...(Array.isArray(sx) ? sx : [sx])]}
     >
       {children}
     </Button>
@@ -112,6 +117,57 @@ function FavouritesNavLabel(): React.ReactElement {
       {favourites.length > 0 && (
         <Box component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>{favourites.length}</Box>
       )}
+    </>
+  )
+}
+
+function AccountNav(): React.ReactElement | null {
+  const { status, email, signOut, openSignIn } = useAuth()
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+
+  if (status === 'signedOut') {
+    return (
+      <NavButton active={false} onClick={openSignIn} sx={{ ml: { sm: 'auto' } }}>
+        <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
+        Sign in
+      </NavButton>
+    )
+  }
+
+  if (status !== 'signedIn') return null
+
+  const closeMenu = () => setMenuAnchor(null)
+
+  return (
+    <>
+      <NavButton
+        active={false}
+        onClick={(event) => setMenuAnchor(event.currentTarget)}
+        aria-haspopup="menu"
+        aria-expanded={menuAnchor ? 'true' : undefined}
+        aria-controls={menuAnchor ? 'account-menu' : undefined}
+        sx={{ ml: { sm: 'auto' }, maxWidth: { sm: 260 } }}
+      >
+        <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5, flexShrink: 0 }} />
+        <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{email ?? 'Account'}</Box>
+      </NavButton>
+      <Menu
+        id="account-menu"
+        anchorEl={menuAnchor}
+        open={menuAnchor !== null}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem
+          onClick={() => {
+            closeMenu()
+            signOut()
+          }}
+        >
+          Sign out
+        </MenuItem>
+      </Menu>
     </>
   )
 }
@@ -173,6 +229,7 @@ function App(): React.ReactElement {
                     <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
                       <FavouritesNavLabel />
                     </NavButton>
+                    <AccountNav />
                   </Box>
 
                   <Typography
@@ -205,6 +262,7 @@ function App(): React.ReactElement {
 
               </Container>
             </Box>
+            <SignInDialog />
           </FavouritesProvider>
         </StockSelectionProvider>
       </AuthProvider>

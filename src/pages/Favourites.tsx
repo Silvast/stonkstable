@@ -4,6 +4,8 @@ import {
   Button,
   Chip,
   IconButton,
+  LinearProgress,
+  Link,
   Paper,
   Snackbar,
   Stack,
@@ -26,6 +28,7 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import dayjs from 'dayjs';
 import { ExchangeCode, useStockSelection } from '../context/StockSelectionContext';
 import { useFavourites } from '../context/FavouritesContext';
+import { useAuth } from '../context/AuthContext';
 import { FavouriteStock, favouriteId } from '../utils/favouritesStorage';
 import { readCache } from '../utils/analysisCache';
 import { buildAnalysis } from '../utils/analysis';
@@ -70,7 +73,8 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { setExchange, setSymbol } = useStockSelection();
-  const { favourites, removeFavourite, restoreFavourite } = useFavourites();
+  const { favourites, removeFavourite, restoreFavourite, syncing, syncError, clearSyncError } = useFavourites();
+  const { status, openSignIn } = useAuth();
   const [order, setOrder] = useState<Order>('desc');
   const [orderBy, setOrderBy] = useState<SortKey>('addedAt');
   const [filter, setFilter] = useState<ExchangeFilter>('All');
@@ -197,7 +201,7 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
         Favourites
       </Typography>
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-        {`${favourites.length} ${favourites.length === 1 ? 'stock' : 'stocks'} · saved in this browser`}
+        {`${favourites.length} ${favourites.length === 1 ? 'stock' : 'stocks'} · ${status === 'signedIn' ? 'saved to your account' : 'saved in this browser'}`}
       </Typography>
 
       {exchanges.length >= 2 && (
@@ -215,6 +219,17 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
           ))}
         </Stack>
       )}
+
+      {status === 'signedOut' && (
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          <Link component="button" type="button" variant="body2" onClick={openSignIn} sx={{ verticalAlign: 'baseline' }}>
+            Sign in
+          </Link>
+          {' to keep your favourites on all your devices'}
+        </Typography>
+      )}
+
+      {syncing && <LinearProgress aria-label="Syncing favourites" sx={{ mb: 1 }} />}
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {favourites.length === 0 ? (
@@ -298,6 +313,15 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
         onClose={handleSnackbarClose}
         message={removed ? `Removed ${removed.name}` : ''}
         action={<Button color="primary" size="small" onClick={undo}>Undo</Button>}
+      />
+      <Snackbar
+        open={syncError !== null}
+        autoHideDuration={6000}
+        onClose={(_event, reason) => {
+          if (reason !== 'clickaway') clearSyncError();
+        }}
+        message={syncError ?? ''}
+        action={<Button color="primary" size="small" onClick={clearSyncError}>Dismiss</Button>}
       />
     </Box>
   );

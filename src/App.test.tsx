@@ -19,6 +19,12 @@ describe('App Component', () => {
         expect(screen.getAllByRole('button', { name: 'Add AAPL to favourites' }).length).toBeGreaterThan(0)
     })
 
+    it('hides sign-in when no backend is configured', () => {
+        render(<App />)
+
+        expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+    })
+
     it('renders navigation buttons at the top', () => {
         render(<App />)
         expect(screen.getByRole('button', { name: /Stock Table/i })).toBeInTheDocument()
