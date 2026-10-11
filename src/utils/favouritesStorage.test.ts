@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
     FAVOURITES_KEY,
     FavouriteStock,
+    clearFavourites,
     favouriteId,
     loadFavourites,
     saveFavourites,
@@ -88,6 +89,24 @@ describe('favouritesStorage', () => {
 
         expect(() => saveFavourites([apple])).not.toThrow()
         expect(console.warn).toHaveBeenCalled()
+    })
+
+    it('clearFavourites removes only the favourites key', () => {
+        saveFavourites([apple])
+        localStorage.setItem('stonkstable:analysis:v1:AAPL.US:2026-10-10', '{}')
+
+        clearFavourites()
+
+        expect(localStorage.getItem(FAVOURITES_KEY)).toBeNull()
+        expect(localStorage.getItem('stonkstable:analysis:v1:AAPL.US:2026-10-10')).toBe('{}')
+    })
+
+    it('clearFavourites does not throw when localStorage fails', () => {
+        vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+            throw new Error('SecurityError')
+        })
+
+        expect(() => clearFavourites()).not.toThrow()
     })
 
     it('builds a favourite with the selector exchange rather than the listing exchange', () => {
