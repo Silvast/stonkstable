@@ -19,6 +19,12 @@ type TrendLabel = 'Up' | 'Down' | 'Sideways';
 type NewsTone = 'Positive' | 'Neutral' | 'Negative';
 type BiasLabel = 'Leaning long' | 'Leaning short' | 'Stand aside';
 
+export interface Signal {
+  rule: 'Trend' | 'Momentum' | 'Volume' | 'News';
+  score: -1 | 0 | 1;
+  text: string;
+}
+
 export interface AnalysisResult {
   asOf: string;
   lastClose: number;
@@ -31,6 +37,7 @@ export interface AnalysisResult {
     vsSma50Pct: number | null;
     label: TrendLabel;
     streak: number;
+    recentCloses: number[];
   };
   range: {
     atr: number | null;
@@ -45,6 +52,7 @@ export interface AnalysisResult {
     relativeVolume: number | null;
   };
   news: { articles: NewsArticle[]; avgPolarity: number | null; tone: NewsTone | null; error: string | null };
+  signals: Signal[];
   bias: { score: number; label: BiasLabel; reasons: string[] };
 }
 
@@ -105,6 +113,7 @@ export function buildAnalysis(bars: StockData[], news: NewsResult): AnalysisResu
     vsSma50Pct: percentFrom(last.close, sma50),
     label: trendLabel(last.close, sma20, sma50),
     streak: streak(closes),
+    recentCloses: closes.slice(-20),
   };
 
   const atrResult = atr(sorted);
@@ -131,7 +140,7 @@ export function buildAnalysis(bars: StockData[], news: NewsResult): AnalysisResu
     : null;
   const tone = newsTone(avgPolarity);
 
-  const analysis: Omit<AnalysisResult, 'bias'> = {
+  const analysis: Omit<AnalysisResult, 'bias' | 'signals'> = {
     asOf: last.date,
     lastClose: last.close,
     dayChangePercent,
@@ -142,35 +151,55 @@ export function buildAnalysis(bars: StockData[], news: NewsResult): AnalysisResu
   };
 
   if (sorted.length < MIN_BARS) {
-    return { ...analysis, bias: { score: 0, label: 'Stand aside', reasons: ['Not enough history'] } };
+    return { ...analysis, signals: [], bias: { score: 0, label: 'Stand aside', reasons: ['Not enough history'] } };
   }
-
-  let score = 0;
-  const reasons: string[] = [];
-  const vote = (direction: number, reason: string) => {
-    score += direction;
-    reasons.push(reason);
-  };
-
-  if (rsiResult?.label === 'Oversold') vote(1, `RSI ${Math.round(rsiResult.value)}, oversold`);
-  if (rsiResult?.label === 'Overbought') vote(-1, `RSI ${Math.round(rsiResult.value)}, overbought`);
 
   const averages = sma50 === null ? '20-day average' : '20- and 50-day averages';
-  if (trend.label === 'Up') vote(1, `Above ${averages}`);
-  if (trend.label === 'Down') vote(-1, `Below ${averages}`);
+  const trendSignal: Signal = trend.label === 'Up'
+    ? { rule: 'Trend', score: 1, text: `Above ${averages}` }
+    : trend.label === 'Down'
+      ? { rule: 'Trend', score: -1, text: `Below ${averages}` }
+      : { rule: 'Trend', score: 0, text: 'No clear trend against the averages' };
 
-  if (relVolume !== null && relVolume >= ANALYSIS_THRESHOLDS.relVolumeHigh) {
-    const times = `${relVolume.toFixed(1)}× volume`;
-    if (dayChangePercent > 0) vote(1, `Up day on ${times}`);
-    if (dayChangePercent < 0) vote(-1, `Down day on ${times}`);
-  }
+  const rsiRounded = rsiResult ? Math.round(rsiResult.value) : null;
+  const momentumSignal: Signal = !rsiResult
+    ? { rule: 'Momentum', score: 0, text: 'Not enough data for RSI' }
+    : rsiResult.label === 'Oversold'
+      ? { rule: 'Momentum', score: 1, text: `RSI ${rsiRounded}, oversold` }
+      : rsiResult.label === 'Overbought'
+        ? { rule: 'Momentum', score: -1, text: `RSI ${rsiRounded}, overbought` }
+        : { rule: 'Momentum', score: 0, text: `RSI ${rsiRounded}, neither overbought nor oversold` };
 
-  if (tone === 'Positive') {
-    vote(1, headlines(polarities.filter(p => p > ANALYSIS_THRESHOLDS.newsPositive).length, 'positive'));
-  }
-  if (tone === 'Negative') {
-    vote(-1, headlines(polarities.filter(p => p < ANALYSIS_THRESHOLDS.newsNegative).length, 'negative'));
-  }
+  const volumeSignal = ((): Signal => {
+    if (relVolume === null) return { rule: 'Volume', score: 0, text: 'Not enough volume history' };
+    const times = relVolume.toFixed(1);
+    if (relVolume >= ANALYSIS_THRESHOLDS.relVolumeHigh && dayChangePercent > 0) {
+      return { rule: 'Volume', score: 1, text: `Up day on ${times}× volume` };
+    }
+    if (relVolume >= ANALYSIS_THRESHOLDS.relVolumeHigh && dayChangePercent < 0) {
+      return { rule: 'Volume', score: -1, text: `Down day on ${times}× volume` };
+    }
+    return { rule: 'Volume', score: 0, text: `${times}× normal volume, no confirmation` };
+  })();
 
-  return { ...analysis, bias: { score, label: biasLabel(score), reasons } };
+  const newsSignal = ((): Signal => {
+    if (news.error) return { rule: 'News', score: 0, text: 'News unavailable' };
+    if (news.data.length === 0) return { rule: 'News', score: 0, text: 'No headlines in 72 h' };
+    if (tone === 'Positive') {
+      return { rule: 'News', score: 1, text: headlines(polarities.filter(p => p > ANALYSIS_THRESHOLDS.newsPositive).length, 'positive') };
+    }
+    if (tone === 'Negative') {
+      return { rule: 'News', score: -1, text: headlines(polarities.filter(p => p < ANALYSIS_THRESHOLDS.newsNegative).length, 'negative') };
+    }
+    if (tone === null) return { rule: 'News', score: 0, text: 'No scored headlines' };
+    return { rule: 'News', score: 0, text: 'Mixed or neutral headlines' };
+  })();
+
+  const signals = [trendSignal, momentumSignal, volumeSignal, newsSignal];
+  const score = signals.reduce((sum, signal) => sum + signal.score, 0);
+  const reasons = [momentumSignal, trendSignal, volumeSignal, newsSignal]
+    .filter(signal => signal.score !== 0)
+    .map(signal => signal.text);
+
+  return { ...analysis, signals, bias: { score, label: biasLabel(score), reasons } };
 }

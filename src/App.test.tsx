@@ -59,7 +59,7 @@ describe('App Component', () => {
             const nav = await screen.findByRole('navigation', { name: 'Sections' })
             await user.click(within(nav).getByRole('button', { name: 'Analysis' }))
 
-            expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'Analyse' })).toBeInTheDocument()
             await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Sections' })).not.toBeInTheDocument())
         } finally {
             window.matchMedia = matchMedia
@@ -86,7 +86,7 @@ describe('App Component', () => {
         await user.click(analysisButton)
 
         expect(analysisButton).toHaveAttribute('aria-current', 'page')
-        expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Analyse' })).toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Fetch' })).not.toBeInTheDocument()
 
         // Buttons remain visible on Analysis page
@@ -127,7 +127,8 @@ describe('App Component', () => {
         await user.click(screen.getByRole('button', { name: /Analysis/i }))
 
         expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
-        expect(screen.getByText(/NOKIA\.HE · Nokia Oyj/)).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Nokia Oyj' })).toBeInTheDocument()
+        expect(screen.getByText('NOKIA.HE')).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Open in TradingView/i }))
             .toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=OMXHEX%3ANOKIA')
     })
