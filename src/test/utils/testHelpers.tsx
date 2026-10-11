@@ -5,6 +5,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { StockSelectionProvider } from '../../context/StockSelectionContext'
 import { FavouritesProvider } from '../../context/FavouritesContext'
+import { AuthProvider } from '../../context/AuthContext'
 
 const theme = responsiveFontSizes(createTheme({
     breakpoints: {
@@ -37,11 +38,13 @@ const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
     return (
         <ThemeProvider theme={theme}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <StockSelectionProvider>
-                    <FavouritesProvider>
-                        {children}
-                    </FavouritesProvider>
-                </StockSelectionProvider>
+                <AuthProvider>
+                    <StockSelectionProvider>
+                        <FavouritesProvider>
+                            {children}
+                        </FavouritesProvider>
+                    </StockSelectionProvider>
+                </AuthProvider>
             </LocalizationProvider>
         </ThemeProvider>
     )

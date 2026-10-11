@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import type { ButtonProps } from '@mui/material'
 import './App.css'
 import {
   Button,
@@ -8,12 +9,17 @@ import {
   createTheme,
   ThemeProvider,
   responsiveFontSizes,
-  Box
+  Box,
+  Menu,
+  MenuItem
 } from '@mui/material'
 import { Analysis, Favourites, StockTablePage } from './pages'
 import { StockSelectionProvider } from './context/StockSelectionContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { FavouritesProvider, useFavourites } from './context/FavouritesContext'
 import StarIcon from '@mui/icons-material/Star'
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
+import SignInDialog from './components/Account/SignInDialog'
 
 
 const theme = responsiveFontSizes(createTheme({
@@ -65,23 +71,23 @@ const theme = responsiveFontSizes(createTheme({
 
 type Page = 'stock-table' | 'analysis' | 'favourites'
 
-interface NavButtonProps {
+interface NavButtonProps extends Omit<ButtonProps, 'onClick'> {
   active: boolean
-  onClick: () => void
-  children: React.ReactNode
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
 }
 
-function NavButton({ active, onClick, children }: NavButtonProps): React.ReactElement {
+function NavButton({ active, onClick, children, sx, ...buttonProps }: NavButtonProps): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   return (
     <Button
+      {...buttonProps}
       type="button"
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       variant="text"
       size={isMobile ? 'small' : 'medium'}
-      sx={{
+      sx={[{
         justifyContent: 'flex-start',
         borderRadius: 1,
         px: 1,
@@ -94,7 +100,7 @@ function NavButton({ active, onClick, children }: NavButtonProps): React.ReactEl
         border: '1px solid',
         borderColor: active ? 'primary.main' : 'divider',
         '&:hover': { bgcolor: 'action.hover' },
-      }}
+      }, ...(Array.isArray(sx) ? sx : [sx])]}
     >
       {children}
     </Button>
@@ -115,96 +121,151 @@ function FavouritesNavLabel(): React.ReactElement {
   )
 }
 
+function AccountNav(): React.ReactElement | null {
+  const { status, email, signOut, openSignIn } = useAuth()
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+
+  if (status === 'signedOut') {
+    return (
+      <NavButton active={false} onClick={openSignIn} sx={{ ml: { sm: 'auto' } }}>
+        <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
+        Sign in
+      </NavButton>
+    )
+  }
+
+  if (status !== 'signedIn') return null
+
+  const closeMenu = () => setMenuAnchor(null)
+
+  return (
+    <>
+      <NavButton
+        active={false}
+        onClick={(event) => setMenuAnchor(event.currentTarget)}
+        aria-haspopup="menu"
+        aria-expanded={menuAnchor ? 'true' : undefined}
+        aria-controls={menuAnchor ? 'account-menu' : undefined}
+        sx={{ ml: { sm: 'auto' }, maxWidth: { sm: 260 } }}
+      >
+        <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5, flexShrink: 0 }} />
+        <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{email ?? 'Account'}</Box>
+      </NavButton>
+      <Menu
+        id="account-menu"
+        anchorEl={menuAnchor}
+        open={menuAnchor !== null}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem
+          onClick={() => {
+            closeMenu()
+            signOut()
+          }}
+        >
+          Sign out
+        </MenuItem>
+      </Menu>
+    </>
+  )
+}
+
 function App(): React.ReactElement {
   const [currentPage, setCurrentPage] = useState<Page>('stock-table');
 
   return (
     <ThemeProvider theme={theme}>
-      <StockSelectionProvider>
-        <FavouritesProvider>
-          <Box
-            sx={{
-              bgcolor: 'background.default',
-              minHeight: '100vh',
-              pt: { xs: 3, sm: 4 },
-              width: '100%',
-            }}
-          >
-            <Container
-              maxWidth="xl"
-              disableGutters={false}
+      <AuthProvider>
+        <StockSelectionProvider>
+          <FavouritesProvider>
+            <Box
               sx={{
-                width: { xs: '100%', lg: '90%' },
-                maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
-                px: { xs: 2, sm: 3, md: 4 },
-                mx: 'auto',
+                bgcolor: 'background.default',
+                minHeight: '100vh',
+                pt: { xs: 3, sm: 4 },
+                width: '100%',
               }}
             >
-              {/* Minimal Header */}
-              <Box
+              <Container
+                maxWidth="xl"
+                disableGutters={false}
                 sx={{
-                  mb: { xs: 3, sm: 4 },
-                  pb: { xs: 2, sm: 3 },
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  width: '100%',
+                  width: { xs: '100%', lg: '90%' },
+                  maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
+                  px: { xs: 2, sm: 3, md: 4 },
+                  mx: 'auto',
                 }}
               >
-                {/* Navigation (top) */}
+                {/* Minimal Header */}
                 <Box
                   sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    gap: 1,
-                    mb: { xs: 2, sm: 2.5 },
-                    alignItems: { xs: 'stretch', sm: 'center' },
-                    justifyContent: 'flex-start',
+                    mb: { xs: 3, sm: 4 },
+                    pb: { xs: 2, sm: 3 },
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
                     width: '100%',
                   }}
                 >
-                  <NavButton active={currentPage === 'stock-table'} onClick={() => setCurrentPage('stock-table')}>
-                    Stock Table
-                  </NavButton>
-                  <NavButton active={currentPage === 'analysis'} onClick={() => setCurrentPage('analysis')}>
-                    Analysis
-                  </NavButton>
-                  <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
-                    <FavouritesNavLabel />
-                  </NavButton>
+                  {/* Navigation (top) */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: 1,
+                      mb: { xs: 2, sm: 2.5 },
+                      alignItems: { xs: 'stretch', sm: 'center' },
+                      justifyContent: 'flex-start',
+                      width: '100%',
+                    }}
+                  >
+                    <NavButton active={currentPage === 'stock-table'} onClick={() => setCurrentPage('stock-table')}>
+                      Stock Table
+                    </NavButton>
+                    <NavButton active={currentPage === 'analysis'} onClick={() => setCurrentPage('analysis')}>
+                      Analysis
+                    </NavButton>
+                    <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
+                      <FavouritesNavLabel />
+                    </NavButton>
+                    <AccountNav />
+                  </Box>
+
+                  <Typography
+                    variant="h6"
+                    component="h1"
+                    sx={{
+                      color: 'text.primary',
+                      fontWeight: 400,
+                      mb: 0.5,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                    }}
+                  >
+                    Stonksei taulukkona
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    component="p"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: { xs: '0.813rem', sm: '0.875rem' }
+                    }}
+                  >
+                    Viimeisen 20 päivän osakekurssit
+                  </Typography>
                 </Box>
 
-                <Typography
-                  variant="h6"
-                  component="h1"
-                  sx={{
-                    color: 'text.primary',
-                    fontWeight: 400,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem' }
-                  }}
-                >
-                  Stonksei taulukkona
-                </Typography>
-                <Typography
-                  variant="body2"
-                  component="p"
-                  sx={{
-                    color: 'text.secondary',
-                    fontSize: { xs: '0.813rem', sm: '0.875rem' }
-                  }}
-                >
-                  Viimeisen 20 päivän osakekurssit
-                </Typography>
-              </Box>
+                {currentPage === 'stock-table' && <StockTablePage />}
+                {currentPage === 'analysis' && <Analysis />}
+                {currentPage === 'favourites' && <Favourites onOpen={setCurrentPage} />}
 
-              {currentPage === 'stock-table' && <StockTablePage />}
-              {currentPage === 'analysis' && <Analysis />}
-              {currentPage === 'favourites' && <Favourites onOpen={setCurrentPage} />}
-
-            </Container>
-          </Box>
-        </FavouritesProvider>
-      </StockSelectionProvider>
+              </Container>
+            </Box>
+            <SignInDialog />
+          </FavouritesProvider>
+        </StockSelectionProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

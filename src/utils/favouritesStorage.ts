@@ -58,3 +58,11 @@ export function saveFavourites(list: FavouriteStock[]): void {
     console.warn('Could not save favourites:', err);
   }
 }
+
+export function clearFavourites(): void {
+  try {
+    localStorage.removeItem(FAVOURITES_KEY);
+  } catch (err) {
+    console.warn('Could not clear favourites:', err);
+  }
+}

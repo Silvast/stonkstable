@@ -8,10 +8,13 @@ import {
   Select,
   SelectChangeEvent,
   Stack,
-  TextField
+  TextField,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import { ExchangeCode, StockEntry, useStockSelection } from '../../context/StockSelectionContext';
 import { useFavourites } from '../../context/FavouritesContext';
+import { useAuth } from '../../context/AuthContext';
 import FavouriteToggle from '../Favourites/FavouriteToggle';
 
 const MAX_OPTIONS = 100; // Limit results to prevent performance issues
@@ -30,9 +33,14 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
     stockOptions,
     setExchange,
     setApiKey,
+    rememberOnDevice,
+    setRememberOnDevice,
+    apiKeySaveError,
     setSelectedStock
   } = useStockSelection();
   const { favourites, isFavourite } = useFavourites();
+  const { status } = useAuth();
+  const apiKeyHint = apiKeySaveError ?? (status === 'signedIn' ? 'Saved to your account' : undefined);
 
   const optionsByCode = useMemo(
     () => new Map(stockOptions.map(option => [option.Code, option])),
@@ -154,25 +162,38 @@ const StockSelector = ({ loading = false }: StockSelectorProps) => {
         <FavouriteToggle stock={selectedStock} exchange={exchange} />
       </Stack>
 
-      <TextField
-        label="API Key"
-        value={apiKey}
-        onChange={handleApiKeyChange}
-        placeholder="Optional (defaults to 'demo')"
-        variant="outlined"
-        size="small"
-        fullWidth
-        sx={{
-          flexGrow: 1,
-          width: { xs: '100%', sm: '40%', md: '60%' },
-          '& .MuiInputLabel-root': {
-            fontSize: { xs: '0.9rem', sm: 'inherit' }
-          },
-          '& .MuiInputBase-input': {
-            fontSize: { xs: '0.9rem', sm: 'inherit' }
-          }
-        }}
-      />
+      <Stack sx={{ flexGrow: 1, width: { xs: '100%', sm: '40%', md: '60%' } }}>
+        <TextField
+          label="API Key"
+          value={apiKey}
+          onChange={handleApiKeyChange}
+          placeholder="Optional (defaults to 'demo')"
+          variant="outlined"
+          size="small"
+          fullWidth
+          helperText={apiKeyHint}
+          error={apiKeySaveError !== null}
+          sx={{
+            '& .MuiInputLabel-root': {
+              fontSize: { xs: '0.9rem', sm: 'inherit' }
+            },
+            '& .MuiInputBase-input': {
+              fontSize: { xs: '0.9rem', sm: 'inherit' }
+            }
+          }}
+        />
+        <FormControlLabel
+          control={(
+            <Checkbox
+              size="small"
+              checked={rememberOnDevice}
+              onChange={(event) => setRememberOnDevice(event.target.checked)}
+            />
+          )}
+          label="Remember on this device"
+          slotProps={{ typography: { variant: 'body2', color: 'text.secondary' } }}
+        />
+      </Stack>
     </Stack>
   );
 };

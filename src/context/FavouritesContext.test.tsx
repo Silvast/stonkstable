@@ -2,11 +2,12 @@ import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { FavouritesProvider, useFavourites } from './FavouritesContext'
+import { AuthProvider } from './AuthContext'
 import { StockEntry } from './StockSelectionContext'
 import { FAVOURITES_KEY, FavouriteStock, loadFavourites, saveFavourites } from '../utils/favouritesStorage'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <FavouritesProvider>{children}</FavouritesProvider>
+    <AuthProvider><FavouritesProvider>{children}</FavouritesProvider></AuthProvider>
 )
 
 const appleEntry: StockEntry = {
