@@ -1,29 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Stack,
-  Typography,
-  useTheme
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Alert, Box, Button, CircularProgress, Link, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import SearchIcon from '@mui/icons-material/Search';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import dayjs from 'dayjs';
-import StockSelector from '../components/StockSelector/StockSelector';
-import { BiasCard, NewsCard, RangeCard, RsiCard, TrendCard } from '../components/Analysis';
-import { changeColor, formatPercent, formatPrice } from '../components/Analysis/format';
+import StockSearchField from '../components/StockSelector/StockSearchField';
+import ExchangeToggle from '../components/StockSelector/ExchangeToggle';
+import FavouriteToggle from '../components/Favourites/FavouriteToggle';
+import Panel from '../components/common/Panel';
+import { CodeChip } from '../components/common/Chips';
+import { BiasPanel, LevelsCard, NewsCard, RsiCard, TrendCard, TypicalDayCard } from '../components/Analysis';
 import { useStockSelection } from '../context/StockSelectionContext';
 import { AnalysisResult, buildAnalysis } from '../utils/analysis';
 import { readCache, writeCache } from '../utils/analysisCache';
 import { fetchNewsFromApi } from '../utils/news';
 import { fetchStockDataFromApi } from '../utils/stockTable';
 import { tradingViewUrl } from '../utils/tradingView';
+import { tokens } from '../theme';
 
 const EOD_DAYS = 180;
 const NEWS_DAYS = 3;
@@ -39,9 +31,7 @@ const fromCache = (symbol: string, exchange: string): LoadedAnalysis | null => {
 };
 
 const Analysis = (): React.ReactElement => {
-  const theme = useTheme();
   const { symbol, exchange, apiKey, selectedStock } = useStockSelection();
-  const [formExpanded, setFormExpanded] = useState(true);
   const [loaded, setLoaded] = useState<LoadedAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,108 +82,87 @@ const Analysis = (): React.ReactElement => {
   };
 
   const result = loaded?.result;
+  const name = selectedStock?.Name ?? symbol;
+  const code = `${symbol}.${exchange}`;
+  const tvHref = tradingViewUrl(symbol, exchange);
 
   return (
-    <Box sx={{ width: '100%', mx: 'auto' }}>
-      <Accordion
-        expanded={formExpanded}
-        onChange={() => setFormExpanded(!formExpanded)}
-        sx={{ mb: 2, boxShadow: theme.shadows[1], '&:before': { display: 'none' } }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          aria-controls="analysis-panel-content"
-          id="analysis-panel-header"
-        >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <SearchIcon fontSize="small" />
-            <Typography variant="body1">{`Stock selection (${symbol}.${exchange})`}</Typography>
-          </Stack>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
-          <form onSubmit={handleSubmit}>
-            <Stack spacing={2}>
-              <StockSelector loading={loading} />
-              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-                <Button type="submit" variant="contained" disabled={loading} sx={{ width: { xs: '100%', sm: 150 } }}>
-                  Analyze
-                </Button>
-                <Button type="button" variant="outlined" disabled={loading || !loaded} onClick={() => analyze(true)}>
-                  Refresh
-                </Button>
-                {loaded?.cachedAt && (
-                  <Typography variant="body2" color="text.secondary">
-                    {`Cached from ${dayjs(loaded.cachedAt).format('HH:mm')}`}
-                  </Typography>
-                )}
-              </Stack>
-            </Stack>
-          </form>
-        </AccordionDetails>
-      </Accordion>
-
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={1}
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        justifyContent="space-between"
-        sx={{ mb: 1 }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 0, md: 1 }} alignItems={{ md: 'baseline' }}>
-          <Typography variant="h6" component="h2">
-            {`${symbol}.${exchange}${selectedStock ? ` · ${selectedStock.Name}` : ''}`}
-          </Typography>
-          {result && (
-            <Typography variant="body1" sx={{ color: changeColor(result.dayChangePercent) }}>
-              {`Last close ${result.asOf}: ${formatPrice(result.lastClose)} (${formatPercent(result.dayChangePercent)})`}
-            </Typography>
-          )}
-        </Stack>
-        <Button
-          component="a"
-          href={tradingViewUrl(symbol, exchange)}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="outlined"
-          size="small"
-          endIcon={<OpenInNewIcon />}
-          sx={{ textTransform: 'none', flexShrink: 0 }}
-        >
-          Open in TradingView
+    <Stack spacing={2}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, alignItems: 'center' }}>
+        <StockSearchField loading={loading} sx={{ flex: '1 1 320px' }} />
+        <ExchangeToggle />
+        <FavouriteToggle stock={selectedStock} exchange={exchange} bordered />
+        {loaded?.cachedAt && (
+          <Box
+            component="span"
+            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minHeight: 32, px: 1.25, borderRadius: '8px', bgcolor: tokens.neutralChip, fontSize: 12, color: tokens.textIdle }}
+          >
+            <ScheduleIcon sx={{ fontSize: 14 }} />
+            <span>{`Cached ${dayjs(loaded.cachedAt).format('HH:mm')}`}</span>
+          </Box>
+        )}
+        <Button type="button" variant="outlined" disabled={loading || !loaded} onClick={() => analyze(true)} sx={{ minHeight: 44 }}>
+          Refresh · 6 calls
         </Button>
-      </Stack>
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2 }}>
-        Based on daily data up to the last close. Not investment advice.
-      </Typography>
+        <Button type="submit" variant="contained" disabled={loading} sx={{ minHeight: 44, px: 2.5, fontWeight: 600 }}>
+          Analyse
+        </Button>
+      </Box>
 
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <Panel sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
           <CircularProgress />
-        </Box>
+        </Panel>
       )}
 
       {!loading && error && <Alert severity="error">{error}</Alert>}
 
       {!loading && !error && !result && (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-          Press Analyze to load (uses about 6 of your daily API calls)
-        </Typography>
+        <Panel sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25 }}>
+            <Typography variant="h1" sx={{ fontSize: 22 }}>{name}</Typography>
+            <CodeChip>{code}</CodeChip>
+          </Box>
+          <Typography variant="body1" color="text.secondary">
+            Press Analyse to load (uses about 6 of your daily API calls)
+          </Typography>
+          <Link
+            href={tvHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="none"
+            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minHeight: 40, fontWeight: 600, alignSelf: 'flex-start' }}
+          >
+            Open in TradingView
+            <OpenInNewIcon sx={{ fontSize: 14 }} />
+          </Link>
+        </Panel>
       )}
 
       {!loading && !error && result && (
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
-          <Box sx={{ gridColumn: '1 / -1' }}>
-            <BiasCard bias={result.bias} />
+        <>
+          <BiasPanel
+            name={name}
+            code={code}
+            lastClose={result.lastClose}
+            dayChangePercent={result.dayChangePercent}
+            asOf={result.asOf}
+            bias={result.bias}
+            signals={result.signals}
+            tradingViewHref={tvHref}
+          />
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+            <RsiCard rsi={result.rsi} />
+            <TrendCard trend={result.trend} />
+            <TypicalDayCard range={result.range} />
           </Box>
-          <RsiCard rsi={result.rsi} />
-          <TrendCard trend={result.trend} />
-          <RangeCard range={result.range} />
-          <Box sx={{ gridColumn: '1 / -1' }}>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+            <LevelsCard range={result.range} lastClose={result.lastClose} />
             <NewsCard news={result.news} />
           </Box>
-        </Box>
+        </>
       )}
-    </Box>
+    </Stack>
   );
 };
 

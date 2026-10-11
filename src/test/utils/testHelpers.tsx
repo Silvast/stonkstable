@@ -1,34 +1,12 @@
 import React, { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
-import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material'
+import { render, RenderOptions, screen, within } from '@testing-library/react'
+import { ThemeProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { StockSelectionProvider } from '../../context/StockSelectionContext'
 import { FavouritesProvider } from '../../context/FavouritesContext'
 import { AuthProvider } from '../../context/AuthContext'
-
-const theme = responsiveFontSizes(createTheme({
-    breakpoints: {
-        values: {
-            xs: 0,
-            sm: 600,
-            md: 960,
-            lg: 1280,
-            xl: 1920,
-        },
-    },
-    components: {
-        MuiContainer: {
-            styleOverrides: {
-                maxWidthXl: {
-                    maxWidth: '90% !important',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                },
-            },
-        },
-    },
-}))
+import { theme } from '../../theme'
 
 interface AllTheProvidersProps {
     children: React.ReactNode
@@ -54,6 +32,13 @@ const customRender = (
     ui: ReactElement,
     options?: Omit<RenderOptions, 'wrapper'>,
 ) => render(ui, { wrapper: AllTheProviders, ...options })
+
+export const exchangeButton = (code: string) =>
+    within(screen.getByRole('group', { name: 'Exchange' })).getByRole('button', { name: code })
+
+export const chooseExchange = async (user: { click: (element: Element) => Promise<void> }, code: string) => {
+    await user.click(exchangeButton(code))
+}
 
 export * from '@testing-library/react'
 export { customRender as render }

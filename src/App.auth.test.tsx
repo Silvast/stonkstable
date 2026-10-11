@@ -59,14 +59,14 @@ describe('App sign-in', () => {
         auth.getCurrentUser.mockReturnValue(new Promise(() => {}))
         render(<App />)
 
-        expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Sign in to sync' })).not.toBeInTheDocument()
     })
 
     it('shows a Sign in button when signed out that opens the sign-in dialog', async () => {
         const user = userEvent.setup()
         render(<App />)
 
-        await user.click(await screen.findByRole('button', { name: 'Sign in' }))
+        await user.click(await screen.findByRole('button', { name: 'Sign in to sync' }))
 
         const dialog = await screen.findByRole('dialog', { name: 'Sign in to Stonkstable' })
         expect(await screen.findByText('Amplify Authenticator')).toBeInTheDocument()
@@ -76,7 +76,7 @@ describe('App sign-in', () => {
     it('closes the sign-in dialog with its close button', async () => {
         const user = userEvent.setup()
         render(<App />)
-        await user.click(await screen.findByRole('button', { name: 'Sign in' }))
+        await user.click(await screen.findByRole('button', { name: 'Sign in to sync' }))
         await screen.findByRole('dialog')
 
         await user.click(screen.getByRole('button', { name: 'Close' }))
@@ -87,7 +87,7 @@ describe('App sign-in', () => {
     it('closes the dialog and shows the email after signing in', async () => {
         const user = userEvent.setup()
         render(<App />)
-        await user.click(await screen.findByRole('button', { name: 'Sign in' }))
+        await user.click(await screen.findByRole('button', { name: 'Sign in to sync' }))
         await screen.findByRole('dialog')
 
         signedInAs('ansku@example.com')
@@ -95,16 +95,17 @@ describe('App sign-in', () => {
 
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
         expect(await screen.findByRole('button', { name: /ansku@example\.com/ })).toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Sign in to sync' })).not.toBeInTheDocument()
     })
 
-    it('signs out from the account menu', async () => {
+    it('opens Settings from the signed-in row and signs out there', async () => {
         const user = userEvent.setup()
         signedInAs('ansku@example.com')
         render(<App />)
 
         await user.click(await screen.findByRole('button', { name: /ansku@example\.com/ }))
-        await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+        expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
         expect(auth.signOut).toHaveBeenCalled()
     })

@@ -21,8 +21,8 @@ const renderPage = (onOpen = vi.fn()) => {
     return onOpen
 }
 
-const rowNames = () =>
-    screen.getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[1].textContent)
+const rowCodes = () =>
+    screen.getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[1].firstChild?.textContent)
 
 describe('Favourites page', () => {
     let fetchSpy: ReturnType<typeof vi.fn>
@@ -42,7 +42,7 @@ describe('Favourites page', () => {
             const user = userEvent.setup()
             const onOpen = renderPage()
 
-            expect(screen.getByRole('heading', { name: 'Favourites' })).toBeInTheDocument()
+            expect(screen.getByRole('heading', { level: 1, name: 'Favourites' })).toBeInTheDocument()
             expect(screen.getByText('No favourites yet')).toBeInTheDocument()
             expect(screen.getByText('Tap the ☆ next to any stock to keep it here.')).toBeInTheDocument()
             expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -58,23 +58,39 @@ describe('Favourites page', () => {
             saveFavourites([apple, nokia, amd])
         })
 
+        it('says the list is saved in this browser only when not signed in', () => {
+            renderPage()
+
+            expect(screen.getByText('Saved in this browser only')).toBeInTheDocument()
+        })
+
         it('lists every favourite, newest first, with its details', () => {
             renderPage()
 
-            expect(screen.getByText('3 stocks · saved in this browser')).toBeInTheDocument()
-            expect(rowNames()).toEqual(['Apple Inc', 'Nokia Oyj', 'Advanced Micro Devices Inc'])
+            expect(rowCodes()).toEqual(['AAPL', 'NOKIA', 'AMD'])
             const nokiaRow = screen.getByRole('row', { name: /Nokia Oyj/ })
-            expect(within(nokiaRow).getByText('NOKIA')).toBeInTheDocument()
+            expect(within(nokiaRow).getByText('Nokia Oyj · EUR')).toBeInTheDocument()
             expect(within(nokiaRow).getByText('HE')).toBeInTheDocument()
-            expect(within(nokiaRow).getByText('EUR')).toBeInTheDocument()
             expect(within(nokiaRow).getByText('8 Oct 2026')).toBeInTheDocument()
         })
 
-        it('says "1 stock" for a single favourite', () => {
-            saveFavourites([nokia])
+        it('shows a flat sparkline and dashes until the stock is analysed today', () => {
             renderPage()
 
-            expect(screen.getByText('1 stock · saved in this browser')).toBeInTheDocument()
+            const nokiaRow = screen.getByRole('row', { name: /Nokia Oyj/ })
+            expect(within(nokiaRow).getByRole('img', { name: 'Not loaded yet' })).toBeInTheDocument()
+            expect(within(nokiaRow).getAllByText('—')).toHaveLength(3)
+        })
+
+        it('shows the sparkline, last close, day change and bias from today\'s Analysis cache', () => {
+            writeCache('AAPL', 'US', { data: mockStockData, error: null }, { data: [], error: null })
+            renderPage()
+
+            const appleRow = screen.getByRole('row', { name: /Apple Inc/ })
+            expect(within(appleRow).getByRole('img', { name: '20-day closing prices for AAPL' })).toBeInTheDocument()
+            expect(within(appleRow).getByText('155.00')).toBeInTheDocument()
+            expect(within(appleRow).getByText('+3.33%')).toBeInTheDocument()
+            expect(within(appleRow).getByText('Aside')).toBeInTheDocument()
         })
 
         it('makes no API calls', () => {
@@ -83,48 +99,37 @@ describe('Favourites page', () => {
             expect(fetchSpy).not.toHaveBeenCalled()
         })
 
-        it('sorts by name', async () => {
+        it('sorts by stock name', async () => {
             const user = userEvent.setup()
             renderPage()
 
-            await user.click(screen.getByRole('button', { name: /^Name/ }))
-            expect(rowNames()).toEqual(['Advanced Micro Devices Inc', 'Apple Inc', 'Nokia Oyj'])
+            await user.click(screen.getByRole('button', { name: /^Stock/ }))
+            expect(rowCodes()).toEqual(['AMD', 'AAPL', 'NOKIA'])
 
-            await user.click(screen.getByRole('button', { name: /^Name/ }))
-            expect(rowNames()).toEqual(['Nokia Oyj', 'Apple Inc', 'Advanced Micro Devices Inc'])
+            await user.click(screen.getByRole('button', { name: /^Stock/ }))
+            expect(rowCodes()).toEqual(['NOKIA', 'AAPL', 'AMD'])
         })
 
-        it('filters by exchange with chips', async () => {
+        it('filters by exchange with a segmented control', async () => {
             const user = userEvent.setup()
             renderPage()
 
             const filters = screen.getByRole('group', { name: 'Exchange' })
-            expect(within(filters).getAllByRole('button').map(chip => chip.textContent)).toEqual(['All', 'US', 'HE'])
+            expect(within(filters).getAllByRole('button').map(button => button.textContent)).toEqual(['All', 'US', 'HE'])
 
             await user.click(within(filters).getByRole('button', { name: 'HE' }))
-            expect(rowNames()).toEqual(['Nokia Oyj'])
+            expect(rowCodes()).toEqual(['NOKIA'])
+            expect(within(filters).getByRole('button', { name: 'HE' })).toHaveAttribute('aria-pressed', 'true')
 
             await user.click(within(filters).getByRole('button', { name: 'All' }))
-            expect(rowNames()).toHaveLength(3)
+            expect(rowCodes()).toHaveLength(3)
         })
 
-        it('hides the exchange chips when all favourites are on one exchange', () => {
+        it('hides the exchange filter when all favourites are on one exchange', () => {
             saveFavourites([apple, amd])
             renderPage()
 
             expect(screen.queryByRole('group', { name: 'Exchange' })).not.toBeInTheDocument()
-        })
-
-        it('shows the last close only when today\'s Analysis cache has it', () => {
-            writeCache('AAPL', 'US', { data: mockStockData, error: null }, { data: [], error: null })
-            renderPage()
-
-            const appleRow = screen.getByRole('row', { name: /Apple Inc/ })
-            expect(within(appleRow).getByText('155.00')).toBeInTheDocument()
-            expect(within(appleRow).getByText('+3.3%')).toBeInTheDocument()
-            expect(within(appleRow).getByText('10 Jan')).toBeInTheDocument()
-            const nokiaRow = screen.getByRole('row', { name: /Nokia Oyj/ })
-            expect(within(nokiaRow).getByText('—')).toBeInTheDocument()
         })
 
         it('removes a favourite with an Undo that restores it with the same added date', async () => {
@@ -144,11 +149,11 @@ describe('Favourites page', () => {
             await waitFor(() => expect(screen.queryByText('Removed Nokia Oyj')).not.toBeInTheDocument())
         })
 
-        it('Analyze selects the stock on its exchange and opens Analysis', async () => {
+        it('Analyse selects the stock on its exchange and opens Analysis', async () => {
             const user = userEvent.setup()
             const onOpen = renderPage()
 
-            await user.click(screen.getByRole('button', { name: 'Analyze NOKIA' }))
+            await user.click(screen.getByRole('button', { name: 'Analyse NOKIA' }))
 
             expect(screen.getByTestId('selection')).toHaveTextContent('NOKIA.HE')
             expect(onOpen).toHaveBeenCalledWith('analysis')

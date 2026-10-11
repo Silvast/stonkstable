@@ -1,5 +1,7 @@
 import React from 'react';
 import dayjs from 'dayjs';
+import { tokens } from '../theme';
+import { recordApiCalls } from './apiUsage';
 
 export type Order = 'asc' | 'desc';
 
@@ -105,14 +107,14 @@ export const COLUMNS: Column[] = [
   },
   { 
     id: 'changePercent', 
-    label: 'Change %', 
+    label: 'Change', 
     numeric: true,
     calculate: calculatePercentChange,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
   },
   { 
     id: 'prevDayChangePercent', 
-    label: 'Prev. day Change %', 
+    label: 'Prev. day', 
     numeric: true,
     calculate: calculatePrevDayChangePercent,
     responsiveVisibility: { xs: true, sm: true, md: true, lg: true, xl: true } 
@@ -170,6 +172,7 @@ export const fetchStockDataFromApi = async (
     
     const apiUrl = `/api/eodhd/eod/${fullSymbol}?from=${formattedFromDate}&to=${formattedToDate}&period=d&api_token=${tokenValue}&fmt=json`;
     
+    recordApiCalls(1);
     const response = await fetch(apiUrl);
     
     if (!response.ok) {
@@ -196,7 +199,7 @@ export const renderCellContent = (row: StockData, column: Column, data?: StockDa
     const isZero = value === 0;
     
     return (
-      <span style={{ color: isPositive ? 'green' : isZero ? 'inherit' : 'red' }}>
+      <span style={{ color: isPositive ? tokens.up : isZero ? 'inherit' : tokens.down }}>
         {isPositive ? '+' : ''}{value.toFixed(2)}%
       </span>
     );
@@ -208,7 +211,7 @@ export const renderCellContent = (row: StockData, column: Column, data?: StockDa
     const isZero = value === 0;
     
     return (
-      <span style={{ color: isPositive ? 'green' : isZero ? 'inherit' : 'red' }}>
+      <span style={{ color: isPositive ? tokens.up : isZero ? 'inherit' : tokens.down }}>
         {isPositive ? '+' : ''}{value.toFixed(2)}%
       </span>
     );

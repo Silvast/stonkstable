@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
-import { render, screen, waitFor, act } from '../test/utils/testHelpers'
+import { render, screen, waitFor, within, act, chooseExchange, exchangeButton } from '../test/utils/testHelpers'
 import Analysis from './Analysis'
 import { makeSeries } from '../test/mocks/eodSeries'
 import { mockNewsPayload, mockJsonResponse } from '../test/mocks/newsApi'
 
 const eodSeries = makeSeries({ days: 120, start: 100, drift: 0.5, range: 2, volume: 1000 })
-const CARD_HEADINGS = ['Bias', 'RSI (14)', 'Trend', 'Range & levels', 'News']
+const CARD_HEADINGS = ['Signals that fired', 'RSI (14)', 'Trend', 'Typical day', 'Levels to watch', 'News, last 3 days']
 
 const stubFetch = ({ eodStatus = 200, newsStatus = 200 } = {}) => {
     const fetchSpy = vi.fn((url: string) => {
@@ -19,7 +19,7 @@ const stubFetch = ({ eodStatus = 200, newsStatus = 200 } = {}) => {
     return fetchSpy
 }
 
-const analyzeButton = () => screen.getByRole('button', { name: 'Analyze' })
+const analyzeButton = () => screen.getByRole('button', { name: 'Analyse' })
 const tradingViewLink = () => screen.getByRole('link', { name: /Open in TradingView/i })
 const expectAllCards = async () => {
     for (const name of CARD_HEADINGS) {
@@ -39,23 +39,24 @@ describe('Analysis page', () => {
         render(<Analysis />)
 
         expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Apple Inc (AAPL)')
-        expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('US')
-        expect(screen.getByText(/AAPL\.US · Apple Inc/)).toBeInTheDocument()
+        expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.getByRole('heading', { level: 1, name: 'Apple Inc' })).toBeInTheDocument()
+        expect(screen.getByText('AAPL.US')).toBeInTheDocument()
         expect(tradingViewLink()).toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=AAPL')
         expect(tradingViewLink()).toHaveAttribute('target', '_blank')
         expect(tradingViewLink()).toHaveAttribute('rel', 'noopener noreferrer')
     })
 
-    it('does not fetch on mount and explains the Analyze button', () => {
+    it('does not fetch on mount and explains the Analyse button', () => {
         const fetchSpy = stubFetch()
         render(<Analysis />)
 
         expect(fetchSpy).not.toHaveBeenCalled()
-        expect(screen.getByText('Press Analyze to load (uses about 6 of your daily API calls)')).toBeInTheDocument()
-        expect(screen.queryByRole('heading', { name: 'Bias' })).not.toBeInTheDocument()
+        expect(screen.getByText('Press Analyse to load (uses about 6 of your daily API calls)')).toBeInTheDocument()
+        expect(screen.queryByRole('heading', { name: 'Signals that fired' })).not.toBeInTheDocument()
     })
 
-    it('fetches 180 days of EOD and 3 days of news once on Analyze and renders all five cards', async () => {
+    it('fetches 180 days of EOD and 3 days of news once on Analyse and renders every panel', async () => {
         const user = userEvent.setup()
         const fetchSpy = stubFetch()
         render(<Analysis />)
@@ -71,8 +72,10 @@ describe('Analysis page', () => {
         expect(eodUrl).toContain(`from=${dayjs().subtract(180, 'day').format('YYYY-MM-DD')}`)
         expect(newsUrl).toContain('s=AAPL.US')
         expect(newsUrl).toContain(`from=${dayjs().subtract(3, 'day').format('YYYY-MM-DD')}`)
-        expect(screen.getByText(/Based on daily data up to the last close\. Not investment advice\./)).toBeInTheDocument()
-        expect(screen.getByText(`Last close ${eodSeries[119].date}: 159.50 (+0.3%)`)).toBeInTheDocument()
+        const header = screen.getByRole('heading', { level: 1, name: 'Apple Inc' }).parentElement!
+        expect(within(header).getByText('159.50')).toBeInTheDocument()
+        expect(within(header).getByText('+0.31%')).toBeInTheDocument()
+        expect(screen.getByText(`Daily data to ${dayjs(eodSeries[119].date).format('ddd D MMM')} close. Not investment advice.`)).toBeInTheDocument()
     })
 
     it('serves a second visit on the same day from the cache without fetching', async () => {
@@ -87,7 +90,7 @@ describe('Analysis page', () => {
         render(<Analysis />)
 
         await expectAllCards()
-        expect(screen.getByText(/^Cached from \d{2}:\d{2}$/)).toBeInTheDocument()
+        expect(screen.getByText(/^Cached \d{2}:\d{2}$/)).toBeInTheDocument()
         expect(fetchSpy).not.toHaveBeenCalled()
     })
 
@@ -102,7 +105,7 @@ describe('Analysis page', () => {
         const fetchSpy = stubFetch()
         render(<Analysis />)
         await expectAllCards()
-        await user.click(screen.getByRole('button', { name: 'Refresh' }))
+        await user.click(screen.getByRole('button', { name: /^Refresh/ }))
 
         await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
     })
@@ -115,7 +118,7 @@ describe('Analysis page', () => {
         await user.click(analyzeButton())
 
         expect(await screen.findByText('Failed to load stock data. Please try again later.')).toBeInTheDocument()
-        expect(localStorage.length).toBe(0)
+        expect(Object.keys(localStorage).filter(key => key.startsWith('stonkstable:analysis:'))).toEqual([])
         for (const name of CARD_HEADINGS) {
             expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument()
         }
@@ -137,8 +140,7 @@ describe('Analysis page', () => {
         stubFetch()
         render(<Analysis />)
 
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        await chooseExchange(user, 'HE')
         await user.type(screen.getByRole('combobox', { name: /Stock Symbol/i }), 'NOKIA')
         await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
@@ -156,15 +158,14 @@ describe('Analysis page', () => {
         render(<Analysis />)
 
         await user.click(analyzeButton())
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'LSE' }))
+        await chooseExchange(user, 'LSE')
         await act(async () => {
             release()
             await new Promise(resolve => setTimeout(resolve, 50))
         })
 
         expect(analyzeButton()).toBeEnabled()
-        expect(screen.queryByRole('heading', { name: 'Bias' })).not.toBeInTheDocument()
-        expect(screen.getByText('Press Analyze to load (uses about 6 of your daily API calls)')).toBeInTheDocument()
+        expect(screen.queryByRole('heading', { name: 'Signals that fired' })).not.toBeInTheDocument()
+        expect(screen.getByText('Press Analyse to load (uses about 6 of your daily API calls)')).toBeInTheDocument()
     })
 })

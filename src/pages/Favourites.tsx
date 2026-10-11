@@ -2,11 +2,8 @@ import React, { useMemo, useState } from 'react';
 import {
   Box,
   Button,
-  Chip,
   IconButton,
   LinearProgress,
-  Link,
-  Paper,
   Snackbar,
   Stack,
   Table,
@@ -25,15 +22,19 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import DesktopWindowsOutlinedIcon from '@mui/icons-material/DesktopWindowsOutlined';
+import CheckIcon from '@mui/icons-material/Check';
 import dayjs from 'dayjs';
 import { ExchangeCode, useStockSelection } from '../context/StockSelectionContext';
 import { useFavourites } from '../context/FavouritesContext';
 import { useAuth } from '../context/AuthContext';
 import { FavouriteStock, favouriteId } from '../utils/favouritesStorage';
-import { readCache } from '../utils/analysisCache';
-import { buildAnalysis } from '../utils/analysis';
+import { BiasShortLabel, FavouriteSnapshot, favouriteSnapshot } from '../utils/favouriteSnapshot';
 import { Order, stableSort } from '../utils/stockTable';
-import { changeColor, formatPercent, formatPrice } from '../components/Analysis/format';
+import Panel from '../components/common/Panel';
+import SegmentedControl from '../components/common/SegmentedControl';
+import { CodeChip, ToneChip, Tone } from '../components/common/Chips';
+import { mono, tokens } from '../theme';
 
 type Page = 'stock-table' | 'analysis';
 type SortKey = 'name' | 'exchange' | 'addedAt';
@@ -43,31 +44,68 @@ interface FavouritesProps {
   onOpen: (page: Page) => void;
 }
 
-interface LastClose {
-  close: number;
-  changePercent: number;
-  date: string;
-}
-
 const EXCHANGES: ExchangeCode[] = ['US', 'HE', 'LSE'];
-
-const SORTABLE: { id: SortKey; label: string }[] = [
-  { id: 'name', label: 'Name' },
-  { id: 'exchange', label: 'Exchange' },
-  { id: 'addedAt', label: 'Added' },
-];
-
-const lastCloseFromCache = (fav: FavouriteStock): LastClose | null => {
-  const cached = readCache(fav.code, fav.exchange);
-  if (!cached || cached.eod.length === 0) return null;
-  const { lastClose, dayChangePercent, asOf } = buildAnalysis(cached.eod, cached.news);
-  return { close: lastClose, changePercent: dayChangePercent, date: asOf };
-};
+const BIAS_TONES: Record<BiasShortLabel, Tone> = { Long: 'up', Short: 'down', Aside: 'neutral' };
+const FLAT = '#7A8494';
 
 const compareBy = (order: Order, orderBy: SortKey) => (a: FavouriteStock, b: FavouriteStock) => {
   const result = a[orderBy].localeCompare(b[orderBy]);
   return order === 'asc' ? result : -result;
 };
+
+const changeColour = (value: number) => (value > 0 ? tokens.up : value < 0 ? tokens.down : FLAT);
+
+const Dash = () => <Box component="span" sx={{ color: tokens.textSecondary }}>—</Box>;
+
+const Sparkline = ({ code, snapshot }: { code: string; snapshot: FavouriteSnapshot | null }) => {
+  const closes = snapshot?.closes ?? [];
+  if (!snapshot || closes.length < 2) {
+    return (
+      <svg viewBox="0 0 120 32" width="120" height="32" role="img" aria-label="Not loaded yet">
+        <path d="M2 16 L118 16" fill="none" stroke={FLAT} strokeWidth="1.75" />
+      </svg>
+    );
+  }
+  const min = Math.min(...closes);
+  const max = Math.max(...closes);
+  const path = closes
+    .map((close, i) => `${i ? 'L' : 'M'}${(2 + (i * 116) / (closes.length - 1)).toFixed(1)} ${(3 + ((max - close) / (max - min || 1)) * 26).toFixed(1)}`)
+    .join(' ');
+  return (
+    <svg viewBox="0 0 120 32" width="120" height="32" role="img" aria-label={`20-day closing prices for ${code}`}>
+      <path d={path} fill="none" stroke={changeColour(snapshot.changePercent)} strokeWidth="1.75" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
+const StatusChip = ({ synced }: { synced: boolean }) => (
+  <Box
+    component="span"
+    sx={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 0.75,
+      px: 1.25,
+      py: '3px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 500,
+      bgcolor: synced ? tokens.upTint : tokens.warningTint,
+      color: synced ? tokens.upOnTint : tokens.warningOnTint,
+    }}
+  >
+    {synced ? <CheckIcon sx={{ fontSize: 13 }} /> : <DesktopWindowsOutlinedIcon sx={{ fontSize: 13 }} />}
+    {synced ? 'Synced to your account' : 'Saved in this browser only'}
+  </Box>
+);
+
+const OpenButton = ({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) => (
+  <Tooltip title={label}>
+    <IconButton aria-label={label} onClick={onClick} sx={{ width: 40, height: 40, border: `1px solid ${tokens.border}`, color: tokens.textIdle }}>
+      {icon}
+    </IconButton>
+  </Tooltip>
+);
 
 const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
   const theme = useTheme();
@@ -83,8 +121,8 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
   const exchanges = EXCHANGES.filter(code => favourites.some(fav => fav.exchange === code));
   const activeFilter: ExchangeFilter = filter !== 'All' && exchanges.includes(filter) ? filter : 'All';
 
-  const lastCloses = useMemo(
-    () => new Map(favourites.map(fav => [favouriteId(fav.code, fav.exchange), lastCloseFromCache(fav)])),
+  const snapshots = useMemo(
+    () => new Map(favourites.map(fav => [favouriteId(fav.code, fav.exchange), favouriteSnapshot(fav)])),
     [favourites]
   );
 
@@ -120,122 +158,33 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
     setRemoved(null);
   };
 
-  const renderActions = (fav: FavouriteStock) => {
-    const tableLabel = `Show ${fav.code} in Stock Table`;
-    const analyzeLabel = `Analyze ${fav.code}`;
-
-    if (isXsScreen) {
-      return (
-        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <Tooltip title="Stock Table">
-            <IconButton size="small" aria-label={tableLabel} onClick={() => open(fav, 'stock-table')}>
-              <TableChartOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Analyze">
-            <IconButton size="small" aria-label={analyzeLabel} onClick={() => open(fav, 'analysis')}>
-              <InsightsOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      );
-    }
-
-    return (
-      <Stack direction="row" spacing={1}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<TableChartOutlinedIcon />}
-          aria-label={tableLabel}
-          onClick={() => open(fav, 'stock-table')}
-          sx={{ textTransform: 'none' }}
-        >
-          Table
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<InsightsOutlinedIcon />}
-          aria-label={analyzeLabel}
-          onClick={() => open(fav, 'analysis')}
-          sx={{ textTransform: 'none' }}
-        >
-          Analyze
-        </Button>
-      </Stack>
-    );
-  };
-
-  const renderLastClose = (fav: FavouriteStock) => {
-    const last = lastCloses.get(favouriteId(fav.code, fav.exchange));
-    if (!last) return <Typography variant="body2" color="text.secondary">—</Typography>;
-    return (
-      <Stack>
-        <Typography variant="body2">{formatPrice(last.close)}</Typography>
-        <Typography variant="caption" sx={{ color: changeColor(last.changePercent) }}>
-          {formatPercent(last.changePercent)}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">{dayjs(last.date).format('D MMM')}</Typography>
-      </Stack>
-    );
-  };
-
   const sortHeader = (id: SortKey, label: string) => (
-    <TableCell key={id} sortDirection={orderBy === id ? order : false}>
-      <TableSortLabel
-        active={orderBy === id}
-        direction={orderBy === id ? order : 'asc'}
-        onClick={() => handleSort(id)}
-      >
+    <TableCell sortDirection={orderBy === id ? order : false}>
+      <TableSortLabel active={orderBy === id} direction={orderBy === id ? order : 'asc'} onClick={() => handleSort(id)}>
         {label}
       </TableSortLabel>
     </TableCell>
   );
 
-  const [nameHeader, exchangeHeader, addedHeader] = SORTABLE.map(({ id, label }) => sortHeader(id, label));
-
   return (
-    <Box sx={{ py: { xs: 2, sm: 3 }, textAlign: 'left' }}>
-      <Typography variant="h6" component="h2" sx={{ color: 'text.primary' }}>
-        Favourites
-      </Typography>
-      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-        {`${favourites.length} ${favourites.length === 1 ? 'stock' : 'stocks'} · ${status === 'signedIn' ? 'saved to your account' : 'saved in this browser'}`}
-      </Typography>
+    <Stack spacing={2}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+          <Typography variant="h1">Favourites</Typography>
+          <StatusChip synced={status === 'signedIn'} />
+        </Box>
+        {exchanges.length >= 2 && (
+          <SegmentedControl label="Exchange" options={['All', ...exchanges] as ExchangeFilter[]} value={activeFilter} onChange={setFilter} />
+        )}
+      </Box>
 
-      {exchanges.length >= 2 && (
-        <Stack direction="row" spacing={1} alignItems="center" role="group" aria-label="Exchange" sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" aria-hidden>Exchange</Typography>
-          {(['All', ...exchanges] as ExchangeFilter[]).map(code => (
-            <Chip
-              key={code}
-              label={code}
-              size="small"
-              color={activeFilter === code ? 'primary' : 'default'}
-              variant={activeFilter === code ? 'filled' : 'outlined'}
-              onClick={() => setFilter(code)}
-            />
-          ))}
-        </Stack>
-      )}
+      {syncing && <LinearProgress aria-label="Syncing favourites" />}
 
-      {status === 'signedOut' && (
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          <Link component="button" type="button" variant="body2" onClick={openSignIn} sx={{ verticalAlign: 'baseline' }}>
-            Sign in
-          </Link>
-          {' to keep your favourites on all your devices'}
-        </Typography>
-      )}
-
-      {syncing && <LinearProgress aria-label="Syncing favourites" sx={{ mb: 1 }} />}
-
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <Panel sx={{ overflow: 'hidden' }}>
         {favourites.length === 0 ? (
           <Stack alignItems="center" spacing={1} sx={{ py: 6, px: 2, textAlign: 'center' }}>
             <StarBorderIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
-            <Typography variant="body1">No favourites yet</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>No favourites yet</Typography>
             <Typography variant="body2" color="text.secondary">
               Tap the ☆ next to any stock to keep it here.
             </Typography>
@@ -244,68 +193,110 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
             </Button>
           </Stack>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table
-              stickyHeader
               size="small"
               aria-label="Favourite stocks"
               sx={{
-                '& .MuiTableCell-head': { fontWeight: 'bold' },
-                '& .MuiTableCell-root': {
-                  padding: { xs: '4px 8px', sm: '10px 20px' },
-                  fontSize: { xs: '0.8rem', sm: '1rem' },
-                  borderBottom: '1px solid rgba(224, 224, 224, 0.3)'
-                }
+                '& .MuiTableCell-root': { borderBottom: `1px solid ${tokens.rowLine}`, px: 1.25, py: 0.75 },
+                '& .MuiTableCell-head': {
+                  bgcolor: tokens.tableHeader,
+                  borderBottom: `1px solid ${tokens.border}`,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: tokens.textSecondary,
+                  whiteSpace: 'nowrap',
+                },
               }}
             >
               <TableHead>
                 <TableRow>
-                  <TableCell padding="checkbox" />
-                  {nameHeader}
-                  {!isXsScreen && <TableCell>Code</TableCell>}
-                  {!isXsScreen && exchangeHeader}
-                  {!isXsScreen && <TableCell>Currency</TableCell>}
-                  {!isXsScreen && <TableCell>Last close</TableCell>}
-                  {!isXsScreen && addedHeader}
-                  <TableCell>Actions</TableCell>
+                  <TableCell padding="checkbox"><Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Favourite</Box></TableCell>
+                  {sortHeader('name', 'Stock')}
+                  {!isXsScreen && sortHeader('exchange', 'Exch.')}
+                  {!isXsScreen && <TableCell>20 days</TableCell>}
+                  {!isXsScreen && <TableCell align="right">Last close</TableCell>}
+                  <TableCell align="right">Day</TableCell>
+                  {!isXsScreen && <TableCell>Bias</TableCell>}
+                  {!isXsScreen && sortHeader('addedAt', 'Added')}
+                  <TableCell align="right">Open</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map(fav => (
-                  <TableRow hover key={favouriteId(fav.code, fav.exchange)}>
-                    <TableCell padding="checkbox">
-                      <Tooltip title="Remove from favourites">
-                        <IconButton
-                          size="small"
-                          aria-label={`Remove ${fav.code} from favourites`}
-                          aria-pressed
-                          onClick={() => remove(fav)}
-                        >
-                          <StarIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      {isXsScreen ? (
-                        <>
-                          <Typography variant="body2">{fav.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{`${fav.code} · ${fav.exchange}`}</Typography>
-                        </>
-                      ) : fav.name}
-                    </TableCell>
-                    {!isXsScreen && <TableCell>{fav.code}</TableCell>}
-                    {!isXsScreen && <TableCell>{fav.exchange}</TableCell>}
-                    {!isXsScreen && <TableCell>{fav.currency}</TableCell>}
-                    {!isXsScreen && <TableCell>{renderLastClose(fav)}</TableCell>}
-                    {!isXsScreen && <TableCell>{dayjs(fav.addedAt).format('D MMM YYYY')}</TableCell>}
-                    <TableCell>{renderActions(fav)}</TableCell>
-                  </TableRow>
-                ))}
+                {rows.map(fav => {
+                  const snapshot = snapshots.get(favouriteId(fav.code, fav.exchange)) ?? null;
+                  return (
+                    <TableRow key={favouriteId(fav.code, fav.exchange)}>
+                      <TableCell padding="checkbox">
+                        <Tooltip title="Remove from favourites">
+                          <IconButton
+                            aria-label={`Remove ${fav.code} from favourites`}
+                            aria-pressed
+                            onClick={() => remove(fav)}
+                            sx={{ width: 40, height: 40 }}
+                          >
+                            <StarIcon fontSize="small" sx={{ color: tokens.star }} />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell sx={{ lineHeight: 1.25 }}>
+                        <Box sx={{ ...mono, fontWeight: 500 }}>{fav.code}</Box>
+                        <Box sx={{ fontSize: 12, color: tokens.textSecondary }}>
+                          {isXsScreen ? `${fav.name} · ${fav.exchange}` : `${fav.name} · ${fav.currency}`}
+                        </Box>
+                      </TableCell>
+                      {!isXsScreen && <TableCell><CodeChip>{fav.exchange}</CodeChip></TableCell>}
+                      {!isXsScreen && <TableCell><Sparkline code={fav.code} snapshot={snapshot} /></TableCell>}
+                      {!isXsScreen && (
+                        <TableCell align="right" sx={{ ...mono, fontSize: 13, fontWeight: 500 }}>
+                          {snapshot ? snapshot.close.toFixed(2) : <Dash />}
+                        </TableCell>
+                      )}
+                      <TableCell align="right" sx={{ ...mono, fontSize: 13, fontWeight: 500, color: snapshot ? changeColour(snapshot.changePercent) : undefined }}>
+                        {snapshot ? `${snapshot.changePercent > 0 ? '+' : ''}${snapshot.changePercent.toFixed(2)}%` : <Dash />}
+                      </TableCell>
+                      {!isXsScreen && (
+                        <TableCell>
+                          {snapshot ? <ToneChip tone={BIAS_TONES[snapshot.bias]} sx={{ fontSize: 11, px: 0.75, py: '1px', borderRadius: '5px' }}>{snapshot.bias}</ToneChip> : <Dash />}
+                        </TableCell>
+                      )}
+                      {!isXsScreen && (
+                        <TableCell sx={{ fontSize: 13, color: tokens.textSecondary, whiteSpace: 'nowrap' }}>
+                          {dayjs(fav.addedAt).format('D MMM YYYY')}
+                        </TableCell>
+                      )}
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <OpenButton label={`Show ${fav.code} in Stock Table`} icon={<TableChartOutlinedIcon fontSize="small" />} onClick={() => open(fav, 'stock-table')} />
+                          <OpenButton label={`Analyse ${fav.code}`} icon={<InsightsOutlinedIcon fontSize="small" />} onClick={() => open(fav, 'analysis')} />
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         )}
-      </Paper>
+      </Panel>
+
+      {status === 'signedOut' && (
+        <Panel sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, px: 2.5, py: 2, borderStyle: 'dashed', borderColor: '#C9D1DB' }}>
+          <Box>
+            <Typography sx={{ fontWeight: 600 }}>Keep your favourites on every device</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in with email and your list syncs. Signed out, everything keeps working in this browser.
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            onClick={openSignIn}
+            sx={{ minHeight: 44, px: 2.25, fontWeight: 600, bgcolor: tokens.ink, '&:hover': { bgcolor: '#000000' } }}
+          >
+            Sign in
+          </Button>
+        </Panel>
+      )}
 
       <Snackbar
         open={removed !== null}
@@ -323,7 +314,7 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
         message={syncError ?? ''}
         action={<Button color="primary" size="small" onClick={clearSyncError}>Dismiss</Button>}
       />
-    </Box>
+    </Stack>
   );
 };
 

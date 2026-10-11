@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { render } from '../../test/utils/testHelpers'
-import StockSelector from './StockSelector'
+import { render, chooseExchange, exchangeButton } from '../../test/utils/testHelpers'
+import StockSearchField from './StockSearchField'
+import ExchangeToggle from './ExchangeToggle'
+import FavouriteToggle from '../Favourites/FavouriteToggle'
 import { useStockSelection } from '../../context/StockSelectionContext'
 import usStocks from '../../assets/us.json'
 import { FavouriteStock, saveFavourites, loadFavourites } from '../../utils/favouritesStorage'
@@ -25,14 +27,25 @@ const SelectionProbe = () => {
     return <output data-testid="selection">{`${symbol}.${exchange}|${apiKey}`}</output>
 }
 
+const Toolbar = () => {
+    const { selectedStock, exchange } = useStockSelection()
+    return (
+        <>
+            <StockSearchField />
+            <ExchangeToggle />
+            <FavouriteToggle stock={selectedStock} exchange={exchange} />
+        </>
+    )
+}
+
 const renderSelector = () => render(
     <>
-        <StockSelector />
+        <Toolbar />
         <SelectionProbe />
     </>
 )
 
-describe('StockSelector Component', () => {
+describe('Stock search, exchange toggle and star', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         localStorage.clear()
@@ -53,8 +66,7 @@ describe('StockSelector Component', () => {
             renderSelector()
             await user.click(screen.getByRole('button', { name: 'Add AAPL to favourites' }))
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
             await user.type(getStockInput(), 'NOKIA')
             await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
@@ -71,12 +83,7 @@ describe('StockSelector Component', () => {
 
         it('shows US as default exchange', () => {
             renderSelector()
-            expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('US')
-        })
-
-        it('renders the API Key field with the demo placeholder', () => {
-            renderSelector()
-            expect(screen.getByLabelText(/API Key/i)).toHaveAttribute('placeholder', "Optional (defaults to 'demo')")
+            expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'true')
         })
     })
 
@@ -97,8 +104,7 @@ describe('StockSelector Component', () => {
             const user = userEvent.setup()
             renderSelector()
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
 
             expect(screen.getByTestId('selection')).toHaveTextContent('AAPL.HE|')
         })
@@ -107,44 +113,13 @@ describe('StockSelector Component', () => {
             const user = userEvent.setup()
             renderSelector()
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
 
             const autocomplete = getStockInput()
             await user.type(autocomplete, 'NOKIA')
             await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
             expect(screen.getByTestId('selection')).toHaveTextContent('NOKIA.HE|')
-        })
-
-        it('typing an API key updates the shared API key', async () => {
-            const user = userEvent.setup()
-            renderSelector()
-
-            await user.type(screen.getByLabelText(/API Key/i), 'test-api-key')
-
-            expect(screen.getByTestId('selection')).toHaveTextContent('AAPL.US|test-api-key')
-        })
-
-        it('remembers the API key on this device only when the box is ticked', async () => {
-            const user = userEvent.setup()
-            renderSelector()
-            const remember = screen.getByRole('checkbox', { name: 'Remember on this device' })
-            expect(remember).not.toBeChecked()
-
-            await user.type(screen.getByLabelText(/API Key/i), 'test-api-key')
-            expect(localStorage.getItem('stonkstable:apikey:v1')).toBeNull()
-
-            await user.click(remember)
-
-            expect(remember).toBeChecked()
-            expect(localStorage.getItem('stonkstable:apikey:v1')).toBe('test-api-key')
-        })
-
-        it('shows no account hint when signed out', () => {
-            renderSelector()
-
-            expect(screen.queryByText('Saved to your account')).not.toBeInTheDocument()
         })
     })
 

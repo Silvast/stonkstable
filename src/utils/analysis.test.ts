@@ -173,6 +173,62 @@ describe('buildAnalysis', () => {
         expect(buildAnalysis([...uptrend].reverse(), positiveNews)).toEqual(buildAnalysis(uptrend, positiveNews))
     })
 
+    describe('signals', () => {
+        it('explains every rule in the order Trend, Momentum, Volume, News', () => {
+            expect(buildAnalysis(uptrend, positiveNews).signals).toEqual([
+                { rule: 'Trend', score: 1, text: 'Above 20- and 50-day averages' },
+                { rule: 'Momentum', score: -1, text: 'RSI 100, overbought' },
+                { rule: 'Volume', score: 1, text: 'Up day on 2.0× volume' },
+                { rule: 'News', score: 1, text: '2 positive headlines in 72 h' },
+            ])
+        })
+
+        it('explains rules that did not fire', () => {
+            const flat = makeSeries({ days: 60, start: 100, drift: 0, range: 2, volume: 1000 })
+
+            expect(buildAnalysis(flat, noNews).signals).toEqual([
+                { rule: 'Trend', score: 0, text: 'No clear trend against the averages' },
+                { rule: 'Momentum', score: 0, text: 'RSI 50, neither overbought nor oversold' },
+                { rule: 'Volume', score: 0, text: '1.0× normal volume, no confirmation' },
+                { rule: 'News', score: 0, text: 'No headlines in 72 h' },
+            ])
+        })
+
+        it('scores the downtrend rules negatively', () => {
+            const signals = buildAnalysis(downtrend, negativeNews).signals
+
+            expect(signals.map(signal => signal.score)).toEqual([-1, 1, -1, -1])
+            expect(signals[0].text).toBe('Below 20- and 50-day averages')
+        })
+
+        it('explains missing or mixed news', () => {
+            const news = (result: NewsResult) => buildAnalysis(uptrend, result).signals[3]
+
+            expect(news({ data: [], error: 'Failed to load news.' })).toEqual({ rule: 'News', score: 0, text: 'News unavailable' })
+            expect(news({ data: [unscored], error: null })).toEqual({ rule: 'News', score: 0, text: 'No scored headlines' })
+            expect(news({ data: [scored(0.5, 'a'), scored(-0.5, 'b')], error: null }))
+                .toEqual({ rule: 'News', score: 0, text: 'Mixed or neutral headlines' })
+        })
+
+        it('says when there is not enough volume history to compare', () => {
+            const twentyDays = makeSeries({ days: 20, start: 100, drift: 1, range: 2, volume: 1000 })
+
+            expect(buildAnalysis(twentyDays, noNews).signals[2]).toEqual({ rule: 'Volume', score: 0, text: 'Not enough volume history' })
+        })
+
+        it('has no signals without enough history', () => {
+            const short = makeSeries({ days: 10, start: 100, drift: 1, range: 2, volume: 1000 })
+
+            expect(buildAnalysis(short, noNews).signals).toEqual([])
+        })
+    })
+
+    it('keeps the last 20 closes, oldest first, for the trend chart', () => {
+        const result = buildAnalysis([...uptrend].reverse(), noNews)
+
+        expect(result.trend.recentCloses).toEqual(Array.from({ length: 20 }, (_, i) => 140 + i))
+    })
+
     it('does not reorder the caller\'s array', () => {
         const descending = [...uptrend].reverse()
         buildAnalysis(descending, positiveNews)

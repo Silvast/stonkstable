@@ -42,7 +42,7 @@ describe('Favourites page and account sync', () => {
         const user = userEvent.setup()
         render(<Favourites onOpen={vi.fn()} />)
 
-        expect(screen.getByText(/to keep your favourites on all your devices/)).toBeInTheDocument()
+        expect(screen.getByText('Keep your favourites on every device')).toBeInTheDocument()
         await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
         expect(authState.openSignIn).toHaveBeenCalled()
@@ -52,19 +52,19 @@ describe('Favourites page and account sync', () => {
         authState.initial = status
         render(<Favourites onOpen={vi.fn()} />)
 
-        expect(screen.queryByText(/to keep your favourites on all your devices/)).not.toBeInTheDocument()
+        expect(screen.queryByText('Keep your favourites on every device')).not.toBeInTheDocument()
     })
 
     it('says where favourites are saved', async () => {
         render(<Favourites onOpen={vi.fn()} />)
-        expect(screen.getByText('0 stocks · saved in this browser')).toBeInTheDocument()
+        expect(screen.getByText('Saved in this browser only')).toBeInTheDocument()
     })
 
     it('says favourites are saved to the account when signed in', async () => {
         authState.initial = 'signedIn'
         render(<Favourites onOpen={vi.fn()} />)
 
-        expect(await screen.findByText('0 stocks · saved to your account')).toBeInTheDocument()
+        expect(await screen.findByText('Synced to your account')).toBeInTheDocument()
     })
 
     it('shows progress while the account favourites load', async () => {
