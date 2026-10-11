@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
-import { Avatar, Box, Button, ButtonBase, LinearProgress, Typography } from '@mui/material';
+import { Avatar, Box, Button, ButtonBase, IconButton, LinearProgress, Tooltip, Typography } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
@@ -19,7 +20,11 @@ export type Page = 'stock-table' | 'analysis' | 'favourites' | 'settings';
 interface SidebarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  onHide?: () => void;
+  hideButtonRef?: React.Ref<HTMLButtonElement>;
 }
+
+export const SIDEBAR_ID = 'app-sidebar';
 
 export const Logo = () => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 0.75 }}>
@@ -259,7 +264,7 @@ const Watchlist = ({ page }: { page: Page }) => {
   );
 };
 
-const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
+const Sidebar = ({ currentPage, onNavigate, onHide, hideButtonRef }: SidebarProps) => {
   const { favourites } = useFavourites();
 
   return (
@@ -276,7 +281,23 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
         gap: 2.75,
       }}
     >
-      <Logo />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        <Logo />
+        {onHide && (
+          <Tooltip title="Hide sidebar">
+            <IconButton
+              ref={hideButtonRef}
+              aria-label="Hide sidebar"
+              aria-expanded
+              aria-controls={SIDEBAR_ID}
+              onClick={onHide}
+              sx={{ width: 40, height: 40, color: tokens.textSecondary }}
+            >
+              <KeyboardDoubleArrowLeftIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
       <Box component="nav" aria-label="Sections" sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <NavItem
           icon={<TableChartOutlinedIcon />}
