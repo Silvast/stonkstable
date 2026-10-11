@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { Analysis, Favourites, StockTablePage } from './pages'
 import { StockSelectionProvider } from './context/StockSelectionContext'
+import { AuthProvider } from './context/AuthContext'
 import { FavouritesProvider, useFavourites } from './context/FavouritesContext'
 import StarIcon from '@mui/icons-material/Star'
 
@@ -120,91 +121,93 @@ function App(): React.ReactElement {
 
   return (
     <ThemeProvider theme={theme}>
-      <StockSelectionProvider>
-        <FavouritesProvider>
-          <Box
-            sx={{
-              bgcolor: 'background.default',
-              minHeight: '100vh',
-              pt: { xs: 3, sm: 4 },
-              width: '100%',
-            }}
-          >
-            <Container
-              maxWidth="xl"
-              disableGutters={false}
+      <AuthProvider>
+        <StockSelectionProvider>
+          <FavouritesProvider>
+            <Box
               sx={{
-                width: { xs: '100%', lg: '90%' },
-                maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
-                px: { xs: 2, sm: 3, md: 4 },
-                mx: 'auto',
+                bgcolor: 'background.default',
+                minHeight: '100vh',
+                pt: { xs: 3, sm: 4 },
+                width: '100%',
               }}
             >
-              {/* Minimal Header */}
-              <Box
+              <Container
+                maxWidth="xl"
+                disableGutters={false}
                 sx={{
-                  mb: { xs: 3, sm: 4 },
-                  pb: { xs: 2, sm: 3 },
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  width: '100%',
+                  width: { xs: '100%', lg: '90%' },
+                  maxWidth: { xs: '100%', lg: '90%', xl: '1800px' },
+                  px: { xs: 2, sm: 3, md: 4 },
+                  mx: 'auto',
                 }}
               >
-                {/* Navigation (top) */}
+                {/* Minimal Header */}
                 <Box
                   sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    gap: 1,
-                    mb: { xs: 2, sm: 2.5 },
-                    alignItems: { xs: 'stretch', sm: 'center' },
-                    justifyContent: 'flex-start',
+                    mb: { xs: 3, sm: 4 },
+                    pb: { xs: 2, sm: 3 },
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
                     width: '100%',
                   }}
                 >
-                  <NavButton active={currentPage === 'stock-table'} onClick={() => setCurrentPage('stock-table')}>
-                    Stock Table
-                  </NavButton>
-                  <NavButton active={currentPage === 'analysis'} onClick={() => setCurrentPage('analysis')}>
-                    Analysis
-                  </NavButton>
-                  <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
-                    <FavouritesNavLabel />
-                  </NavButton>
+                  {/* Navigation (top) */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: 1,
+                      mb: { xs: 2, sm: 2.5 },
+                      alignItems: { xs: 'stretch', sm: 'center' },
+                      justifyContent: 'flex-start',
+                      width: '100%',
+                    }}
+                  >
+                    <NavButton active={currentPage === 'stock-table'} onClick={() => setCurrentPage('stock-table')}>
+                      Stock Table
+                    </NavButton>
+                    <NavButton active={currentPage === 'analysis'} onClick={() => setCurrentPage('analysis')}>
+                      Analysis
+                    </NavButton>
+                    <NavButton active={currentPage === 'favourites'} onClick={() => setCurrentPage('favourites')}>
+                      <FavouritesNavLabel />
+                    </NavButton>
+                  </Box>
+
+                  <Typography
+                    variant="h6"
+                    component="h1"
+                    sx={{
+                      color: 'text.primary',
+                      fontWeight: 400,
+                      mb: 0.5,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' }
+                    }}
+                  >
+                    Stonksei taulukkona
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    component="p"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: { xs: '0.813rem', sm: '0.875rem' }
+                    }}
+                  >
+                    Viimeisen 20 päivän osakekurssit
+                  </Typography>
                 </Box>
 
-                <Typography
-                  variant="h6"
-                  component="h1"
-                  sx={{
-                    color: 'text.primary',
-                    fontWeight: 400,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem' }
-                  }}
-                >
-                  Stonksei taulukkona
-                </Typography>
-                <Typography
-                  variant="body2"
-                  component="p"
-                  sx={{
-                    color: 'text.secondary',
-                    fontSize: { xs: '0.813rem', sm: '0.875rem' }
-                  }}
-                >
-                  Viimeisen 20 päivän osakekurssit
-                </Typography>
-              </Box>
+                {currentPage === 'stock-table' && <StockTablePage />}
+                {currentPage === 'analysis' && <Analysis />}
+                {currentPage === 'favourites' && <Favourites onOpen={setCurrentPage} />}
 
-              {currentPage === 'stock-table' && <StockTablePage />}
-              {currentPage === 'analysis' && <Analysis />}
-              {currentPage === 'favourites' && <Favourites onOpen={setCurrentPage} />}
-
-            </Container>
-          </Box>
-        </FavouritesProvider>
-      </StockSelectionProvider>
+              </Container>
+            </Box>
+          </FavouritesProvider>
+        </StockSelectionProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }
