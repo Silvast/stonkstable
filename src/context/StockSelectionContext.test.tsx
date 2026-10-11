@@ -2,12 +2,13 @@ import React from 'react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { StockSelectionProvider, useStockSelection, StockEntry } from './StockSelectionContext'
+import { AuthProvider } from './AuthContext'
 import heStocks from '../assets/he.json'
 import usStocks from '../assets/us.json'
 import lseStocks from '../assets/lse.json'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StockSelectionProvider>{children}</StockSelectionProvider>
+    <AuthProvider><StockSelectionProvider>{children}</StockSelectionProvider></AuthProvider>
 )
 
 describe('StockSelectionContext', () => {

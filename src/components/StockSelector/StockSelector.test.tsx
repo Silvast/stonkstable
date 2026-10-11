@@ -125,6 +125,27 @@ describe('StockSelector Component', () => {
 
             expect(screen.getByTestId('selection')).toHaveTextContent('AAPL.US|test-api-key')
         })
+
+        it('remembers the API key on this device only when the box is ticked', async () => {
+            const user = userEvent.setup()
+            renderSelector()
+            const remember = screen.getByRole('checkbox', { name: 'Remember on this device' })
+            expect(remember).not.toBeChecked()
+
+            await user.type(screen.getByLabelText(/API Key/i), 'test-api-key')
+            expect(localStorage.getItem('stonkstable:apikey:v1')).toBeNull()
+
+            await user.click(remember)
+
+            expect(remember).toBeChecked()
+            expect(localStorage.getItem('stonkstable:apikey:v1')).toBe('test-api-key')
+        })
+
+        it('shows no account hint when signed out', () => {
+            renderSelector()
+
+            expect(screen.queryByText('Saved to your account')).not.toBeInTheDocument()
+        })
     })
 
     describe('Favourites in the dropdown', () => {
