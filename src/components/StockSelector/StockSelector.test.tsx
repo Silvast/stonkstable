@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { render } from '../../test/utils/testHelpers'
+import { render, chooseExchange, exchangeButton } from '../../test/utils/testHelpers'
 import StockSelector from './StockSelector'
 import { useStockSelection } from '../../context/StockSelectionContext'
 import usStocks from '../../assets/us.json'
@@ -53,8 +53,7 @@ describe('StockSelector Component', () => {
             renderSelector()
             await user.click(screen.getByRole('button', { name: 'Add AAPL to favourites' }))
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
             await user.type(getStockInput(), 'NOKIA')
             await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
@@ -71,7 +70,7 @@ describe('StockSelector Component', () => {
 
         it('shows US as default exchange', () => {
             renderSelector()
-            expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('US')
+            expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'true')
         })
 
         it('renders the API Key field with the demo placeholder', () => {
@@ -97,8 +96,7 @@ describe('StockSelector Component', () => {
             const user = userEvent.setup()
             renderSelector()
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
 
             expect(screen.getByTestId('selection')).toHaveTextContent('AAPL.HE|')
         })
@@ -107,8 +105,7 @@ describe('StockSelector Component', () => {
             const user = userEvent.setup()
             renderSelector()
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
+            await chooseExchange(user, 'HE')
 
             const autocomplete = getStockInput()
             await user.type(autocomplete, 'NOKIA')

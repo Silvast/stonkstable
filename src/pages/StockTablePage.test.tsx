@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '../test/utils/testHelpers';
+import { render, screen } from '../test/utils/testHelpers';
 import StockTablePage from './StockTablePage';
 import { mockStockData, mockSuccessResponse } from '../test/mocks/stockApi';
 
@@ -12,9 +12,7 @@ describe('StockTablePage', () => {
   it('renders StockTable within the page', async () => {
     render(<StockTablePage />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument();
-    });
+    expect(screen.getByRole('button', { name: 'Fetch' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Daily prices' })).toBeInTheDocument();
   });
 });
-

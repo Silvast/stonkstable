@@ -1,185 +1,83 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { render } from '../../test/utils/testHelpers'
+import dayjs from 'dayjs'
+import { render, chooseExchange, exchangeButton } from '../../test/utils/testHelpers'
 import StockTable from './StockTable'
 import { mockStockData, mockSuccessResponse, mockErrorResponse, mockEmptyResponse } from '../../test/mocks/stockApi'
-import heStocks from '../../assets/he.json'
+import { pricesToCsv } from '../../utils/priceStats'
 import usStocks from '../../assets/us.json'
+
+const getStockInput = () => screen.getByRole('combobox', { name: /Stock Symbol/i })
+const dataRows = () => within(screen.getByRole('table', { name: /Daily prices/ })).getAllByRole('row').slice(1)
+
+const readBlob = (blob: Blob) => new Promise<string>(resolve => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.readAsText(blob)
+})
+
+const waitForData = () => screen.findByRole('heading', { level: 2, name: 'Daily prices' })
 
 describe('StockTable Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        localStorage.clear()
         vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
     })
 
-    describe('Initial Render', () => {
-        it('renders without crashing', () => {
-            render(<StockTable />)
-            expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
-        })
-
-        it('shows default AAPL stock selection', async () => {
-            render(<StockTable />)
-            const autocomplete = screen.getByLabelText(/Search for a stock by name or symbol/i)
-            // Autocomplete input should be present
-            expect(autocomplete).toBeInTheDocument()
-        })
-
-        it('shows US as default exchange', () => {
-            render(<StockTable />)
-            const exchangeSelect = screen.getByLabelText(/Exchange/i)
-            expect(exchangeSelect).toHaveTextContent('US')
-        })
-
-        it('displays stock data table after initial fetch', async () => {
-            render(<StockTable />)
-            await waitFor(() => {
-                expect(screen.getByText('Date')).toBeInTheDocument()
-                expect(screen.getByText('Change %')).toBeInTheDocument()
-            })
-        })
+    afterEach(() => {
+        vi.restoreAllMocks()
     })
 
-    describe('Exchange Switching', () => {
-        it('switches from US to HE exchange', async () => {
+    describe('Toolbar', () => {
+        it('shows the stock search with AAPL selected and US as the exchange', () => {
+            render(<StockTable />)
+
+            expect(getStockInput()).toHaveValue('Apple Inc (AAPL)')
+            expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'true')
+            expect(exchangeButton('HE')).toHaveAttribute('aria-pressed', 'false')
+            expect(screen.getByRole('button', { name: 'Fetch' })).toBeInTheDocument()
+        })
+
+        it('no longer shows the API key or an accordion', () => {
+            render(<StockTable />)
+
+            expect(screen.queryByLabelText(/API Key/i)).not.toBeInTheDocument()
+            expect(screen.queryByText(/Stock Search Options/i)).not.toBeInTheDocument()
+        })
+
+        it('switches exchange with the segmented control', async () => {
             const user = userEvent.setup()
             render(<StockTable />)
 
-            const exchangeSelect = screen.getByLabelText(/Exchange/i)
-            await user.click(exchangeSelect)
+            await chooseExchange(user, 'LSE')
 
-            const heOption = await screen.findByRole('option', { name: 'HE' })
-            await user.click(heOption)
-
-            await waitFor(() => {
-                expect(exchangeSelect).toHaveTextContent('HE')
-            })
+            expect(exchangeButton('LSE')).toHaveAttribute('aria-pressed', 'true')
+            expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'false')
         })
 
-        it('switches from US to LSE exchange', async () => {
+        it('shows the date range on a button that opens the date pickers', async () => {
             const user = userEvent.setup()
             render(<StockTable />)
+            const start = dayjs().subtract(20, 'day')
+            const end = dayjs().subtract(1, 'day')
+            const label = `${start.format(start.year() === end.year() ? 'D MMM' : 'D MMM YYYY')} – ${end.format('D MMM YYYY')}`
 
-            const exchangeSelect = screen.getByLabelText(/Exchange/i)
-            await user.click(exchangeSelect)
+            await user.click(screen.getByRole('button', { name: `Date range ${label}` }))
 
-            const lseOption = await screen.findByRole('option', { name: 'LSE' })
-            await user.click(lseOption)
-
-            await waitFor(() => {
-                expect(exchangeSelect).toHaveTextContent('LSE')
-            })
+            expect(await screen.findByLabelText(/From Date/i)).toBeInTheDocument()
+            expect(screen.getByLabelText(/To Date/i)).toBeInTheDocument()
         })
 
-        it('updates stock options when exchange changes', async () => {
-            const user = userEvent.setup()
-            render(<StockTable />)
-
-            // Initially US stocks should be available
-            expect(usStocks.length).toBeGreaterThan(0)
-
-            // Switch to HE
-            const exchangeSelect = screen.getByLabelText(/Exchange/i)
-            await user.click(exchangeSelect)
-            const heOption = await screen.findByRole('option', { name: 'HE' })
-            await user.click(heOption)
-
-            await waitFor(() => {
-                expect(exchangeSelect).toHaveTextContent('HE')
-            })
-
-            // HE should have fewer stocks than US
-            expect(heStocks.length).toBeLessThan(usStocks.length)
-        })
-    })
-
-    describe('Stock Selection', () => {
-        it('allows selecting a different stock', async () => {
-            const user = userEvent.setup()
-            render(<StockTable />)
-
-            const autocomplete = screen.getByLabelText(/Search for a stock by name or symbol/i)
-            await user.click(autocomplete)
-            await user.type(autocomplete, 'Microsoft')
-
-            // Wait for filtered options to appear
-            await waitFor(() => {
-                // Autocomplete should respond to input
-                expect(autocomplete).toBeInTheDocument()
-            })
-        })
-
-        it('filters stocks by code', async () => {
-            const user = userEvent.setup()
-            render(<StockTable />)
-
-            const autocomplete = screen.getByLabelText(/Search for a stock by name or symbol/i)
-            await user.click(autocomplete)
-            await user.type(autocomplete, 'MSFT')
-
-            await waitFor(() => {
-                // Autocomplete should respond to input
-                expect(autocomplete).toBeInTheDocument()
-            })
-        })
-    })
-
-    describe('Performance Fix - Critical Regression Test', () => {
-        it('limits autocomplete results to 100 items for performance', async () => {
-            const user = userEvent.setup()
-            render(<StockTable />)
-
-            // US exchange has 50k+ stocks
-            expect(usStocks.length).toBeGreaterThan(50000)
-
-            const autocomplete = screen.getByLabelText(/Search for a stock by name or symbol/i)
-            await user.click(autocomplete)
-
-            // Open dropdown with empty search (worst case scenario)
-            await waitFor(() => {
-                const listbox = screen.queryByRole('listbox')
-                if (listbox) {
-                    const options = within(listbox).queryAllByRole('option')
-                    // Should show at most 100 options, not all 50k+
-                    expect(options.length).toBeLessThanOrEqual(100)
-                }
-            })
-        })
-
-        it('filterOptions stops early when limit is reached', async () => {
-            const user = userEvent.setup()
-            render(<StockTable />)
-
-            const autocomplete = screen.getByLabelText(/Search for a stock by name or symbol/i)
-            await user.click(autocomplete)
-            // Type and then select all to search empty
-            await user.type(autocomplete, 'A')
-
-            await waitFor(() => {
-                const listbox = screen.queryByRole('listbox')
-                if (listbox) {
-                    const options = within(listbox).queryAllByRole('option')
-                    // Should limit results for performance
-                    expect(options.length).toBeLessThanOrEqual(100)
-                }
-            }, { timeout: 3000 })
-        })
-    })
-
-    describe('Form Submission', () => {
-        it('triggers API call when Fetch Data button is clicked', async () => {
+        it('fetches once on load and again when Fetch is pressed', async () => {
             const user = userEvent.setup()
             const fetchSpy = vi.fn(() => mockSuccessResponse(mockStockData))
             vi.stubGlobal('fetch', fetchSpy)
-
             render(<StockTable />)
-
-            // Wait for initial fetch
             await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
 
-            const fetchButton = screen.getByRole('button', { name: /Fetch Data/i })
-            await user.click(fetchButton)
+            await user.click(screen.getByRole('button', { name: 'Fetch' }))
 
             await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
         })
@@ -188,182 +86,186 @@ describe('StockTable Component', () => {
             const user = userEvent.setup()
             const fetchSpy = vi.fn((_url: string) => mockSuccessResponse(mockStockData))
             vi.stubGlobal('fetch', fetchSpy)
-
             render(<StockTable />)
             await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
 
-            await user.click(screen.getByLabelText(/Exchange/i))
-            await user.click(await screen.findByRole('option', { name: 'HE' }))
-            const stockInput = screen.getByRole('combobox', { name: /Stock Symbol/i })
-            await user.type(stockInput, 'NOKIA')
+            await chooseExchange(user, 'HE')
+            await user.type(getStockInput(), 'NOKIA')
             await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
-            await user.click(screen.getByRole('button', { name: /Fetch Data/i }))
+            await user.click(screen.getByRole('button', { name: 'Fetch' }))
 
             await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
             expect(fetchSpy.mock.calls[1][0]).toContain('/api/eodhd/eod/NOKIA.HE?')
         })
+    })
 
-        it('updates API key when changed', async () => {
+    describe('Performance Fix - Critical Regression Test', () => {
+        it('limits autocomplete results to 100 items for performance', async () => {
             const user = userEvent.setup()
             render(<StockTable />)
 
-            const apiKeyInput = screen.getByLabelText(/API Key/i)
-            await user.clear(apiKeyInput)
-            await user.type(apiKeyInput, 'test-api-key')
+            expect(usStocks.length).toBeGreaterThan(50000)
 
-            expect(apiKeyInput).toHaveValue('test-api-key')
+            await user.clear(getStockInput())
+            await user.click(getStockInput())
+
+            const listbox = await screen.findByRole('listbox')
+            expect(within(listbox).getAllByRole('option')).toHaveLength(100)
         })
     })
 
-    describe('Date Pickers', () => {
-        it('renders start date picker', () => {
-            render(<StockTable />)
-            const startDateInput = screen.getByLabelText(/From Date/i)
-            expect(startDateInput).toBeInTheDocument()
-        })
-
-        it('renders end date picker', () => {
-            render(<StockTable />)
-            const endDateInput = screen.getByLabelText(/To Date/i)
-            expect(endDateInput).toBeInTheDocument()
-        })
-    })
-
-    describe('Loading States', () => {
-        it('shows loading spinner during data fetch', async () => {
-            let resolvePromise: (value: Response) => void
-            const fetchPromise = new Promise<Response>((resolve) => {
-                resolvePromise = resolve
-            })
-            vi.stubGlobal('fetch', vi.fn(() => fetchPromise))
-
+    describe('Stock header', () => {
+        it('shows the fetched stock with its code, currency, last close and change', async () => {
             render(<StockTable />)
 
-            // Should show loading state
-            await waitFor(() => {
-                expect(screen.getByRole('progressbar')).toBeInTheDocument()
-            })
-
-            // Resolve the promise
-            resolvePromise!(mockSuccessResponse(mockStockData) as any)
-
-            // Loading should disappear
-            await waitFor(() => {
-                expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-            })
-        })
-    })
-
-    describe('Error States', () => {
-        it('displays error message when API fails', async () => {
-            vi.stubGlobal('fetch', vi.fn(() => mockErrorResponse(500, 'Internal Server Error')))
-
-            render(<StockTable />)
-
-            await waitFor(() => {
-                expect(screen.getByText(/Failed to load stock data/i)).toBeInTheDocument()
-            })
+            expect(await screen.findByRole('heading', { level: 1, name: 'Apple Inc' })).toBeInTheDocument()
+            expect(screen.getByText('AAPL.US')).toBeInTheDocument()
+            expect(screen.getByText('USD')).toBeInTheDocument()
+            expect(screen.getAllByText('155.00')[0]).toBeInTheDocument()
+            expect(screen.getByText('+5.00 · +3.33%')).toBeInTheDocument()
+            expect(screen.getByText('Wed 10 Jan close')).toBeInTheDocument()
         })
 
-        it('displays message when no data is available', async () => {
-            vi.stubGlobal('fetch', vi.fn(() => mockEmptyResponse()))
-
-            render(<StockTable />)
-
-            await waitFor(() => {
-                expect(screen.getByText(/No data available for the selected parameters/i)).toBeInTheDocument()
-            })
-        })
-    })
-
-    describe('Table Sorting', () => {
-        it('renders sortable table headers', async () => {
-            render(<StockTable />)
-
-            await waitFor(() => {
-                expect(screen.getByText('Date')).toBeInTheDocument()
-                expect(screen.getByText('Change %')).toBeInTheDocument()
-                expect(screen.getByText('Open')).toBeInTheDocument()
-                expect(screen.getByText('Close')).toBeInTheDocument()
-            })
-        })
-
-        it('clicking column header triggers sort', async () => {
+        it('keeps showing the fetched stock until the new one is fetched', async () => {
             const user = userEvent.setup()
             render(<StockTable />)
+            await screen.findByRole('heading', { level: 1, name: 'Apple Inc' })
 
-            await waitFor(() => {
-                expect(screen.getByText('2024-01-10')).toBeInTheDocument()
-            })
+            await chooseExchange(user, 'HE')
+            await user.type(getStockInput(), 'NOKIA')
+            await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
-            const dateHeader = screen.getByText('Date')
-            await user.click(dateHeader)
-
-            // Sort should have been triggered, data still displayed
-            await waitFor(() => {
-                expect(screen.getByText('2024-01-10')).toBeInTheDocument()
-            })
-        })
-    })
-
-    describe('Favourite star in the search header', () => {
-        it('does not nest the star button inside another button', () => {
-            render(<StockTable />)
-
-            expect(document.querySelectorAll('button button')).toHaveLength(0)
+            expect(screen.getByRole('heading', { level: 1, name: 'Apple Inc' })).toBeInTheDocument()
         })
 
-        it('toggles the favourite without collapsing the search panel', async () => {
+        it('stars the fetched stock from the header', async () => {
             const user = userEvent.setup()
-            localStorage.clear()
             render(<StockTable />)
-
-            const header = document.getElementById('search-panel-header')!
-            expect(header).toHaveAttribute('aria-expanded', 'true')
+            await screen.findByRole('heading', { level: 1, name: 'Apple Inc' })
+            const header = screen.getByRole('region', { name: 'Apple Inc' })
 
             await user.click(within(header).getByRole('button', { name: 'Add AAPL to favourites' }))
 
-            expect(within(header).getByRole('button', { name: 'Remove AAPL from favourites' })).toBeInTheDocument()
-            expect(header).toHaveAttribute('aria-expanded', 'true')
+            expect(within(header).getByRole('button', { name: 'Remove AAPL from favourites' })).toHaveAttribute('aria-pressed', 'true')
         })
     })
 
-    describe('Responsive Behavior', () => {
-        it('shows accordion for search options', () => {
+    describe('KPI tiles', () => {
+        it('summarises the fetched rows', async () => {
             render(<StockTable />)
-            const accordion = screen.getByText(/Stock Search Options/i)
-            expect(accordion).toBeInTheDocument()
-        })
+            await waitForData()
 
-        it('renders all main form fields', () => {
-            render(<StockTable />)
-            expect(screen.getByLabelText(/Search for a stock by name or symbol/i)).toBeInTheDocument()
-            expect(screen.getByLabelText(/Exchange/i)).toBeInTheDocument()
-            expect(screen.getByLabelText(/API Key/i)).toBeInTheDocument()
-            expect(screen.getByLabelText(/From Date/i)).toBeInTheDocument()
-            expect(screen.getByLabelText(/To Date/i)).toBeInTheDocument()
+            const tile = (label: string) => screen.getByText(label).parentElement!
+            expect(tile('Period change')).toHaveTextContent('+3.33%')
+            expect(tile('20-day high')).toHaveTextContent('156.00')
+            expect(tile('20-day low')).toHaveTextContent('143.00')
+            expect(tile('Avg. volume')).toHaveTextContent('1M')
+            expect(tile('Up days')).toHaveTextContent('2 / 5')
         })
     })
 
-    describe('Data Display', () => {
-        it('displays stock data in table rows', async () => {
+    describe('Chart', () => {
+        it('draws the close and volume chart with a description', async () => {
             render(<StockTable />)
+            await waitForData()
 
-            await waitFor(() => {
-                expect(screen.getByText('2024-01-10')).toBeInTheDocument()
-                expect(screen.getByText('155.00')).toBeInTheDocument()
-            })
+            expect(screen.getByRole('heading', { name: 'Close and volume' })).toBeInTheDocument()
+            expect(screen.getByRole('img', { name: 'Closing price from 150.00 to 155.00 over 5 trading days, with daily volume bars' })).toBeInTheDocument()
+        })
+    })
+
+    describe('Daily prices table', () => {
+        it('shows one row per day, newest first, with formatted dates and volumes', async () => {
+            render(<StockTable />)
+            await waitForData()
+
+            const rows = dataRows()
+            expect(rows).toHaveLength(5)
+            expect(within(rows[0]).getByText('Wed 10 Jan 2024')).toBeInTheDocument()
+            expect(within(rows[0]).getByText('1M')).toBeInTheDocument()
+            expect(within(rows[1]).getByText('950K')).toBeInTheDocument()
         })
 
-        it('formats percentage changes with colors', async () => {
+        it('has the redesigned column headers', async () => {
+            render(<StockTable />)
+            await waitForData()
+
+            const headers = within(screen.getByRole('table', { name: /Daily prices/ })).getAllByRole('columnheader')
+            expect(headers.map(header => header.textContent?.replace(/sorted (ascending|descending)/, '').trim())).toEqual([
+                'Date', 'Change', 'Prev. day', 'Open', 'Close', 'High', 'Low', 'Volume',
+            ])
+        })
+
+        it('sorts by a column when its header is clicked', async () => {
+            const user = userEvent.setup()
+            render(<StockTable />)
+            await waitForData()
+
+            await user.click(screen.getByRole('button', { name: /^Close/ }))
+
+            const closes = dataRows().map(row => within(row).getAllByRole('cell')[4].textContent)
+            expect(closes).toEqual(['145.00', '148.00', '150.00', '150.00', '155.00'])
+        })
+
+        it('downloads the rows as CSV', async () => {
+            const user = userEvent.setup()
+            const createObjectURL = vi.fn((_blob: Blob) => 'blob:prices')
+            const revokeObjectURL = vi.fn()
+            vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
+            const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+            render(<StockTable />)
+            await waitForData()
+
+            await user.click(screen.getByRole('button', { name: 'CSV' }))
+
+            expect(click).toHaveBeenCalled()
+            const anchor = click.mock.contexts[0] as HTMLAnchorElement
+            expect(anchor.download).toBe('AAPL.US-prices.csv')
+            expect(await readBlob(createObjectURL.mock.calls[0][0])).toBe(pricesToCsv(mockStockData))
+            expect(revokeObjectURL).toHaveBeenCalledWith('blob:prices')
+        })
+
+        it('shows the data source caption', async () => {
+            render(<StockTable />)
+            await waitForData()
+
+            expect(screen.getByText('End-of-day data from EODHD. Not investment advice.')).toBeInTheDocument()
+        })
+    })
+
+    describe('Loading and errors', () => {
+        it('shows a loading indicator during the fetch', async () => {
+            let resolveFetch: (value: Response) => void = () => {}
+            vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { resolveFetch = resolve })))
             render(<StockTable />)
 
-            await waitFor(() => {
-                // Should have percentage data displayed
-                const table = screen.getByRole('table')
-                expect(table).toBeInTheDocument()
-            })
+            expect(await screen.findByRole('progressbar')).toBeInTheDocument()
+
+            resolveFetch(await mockSuccessResponse(mockStockData))
+            await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument())
         })
+
+        it('shows the error when the API fails', async () => {
+            vi.spyOn(console, 'error').mockImplementation(() => {})
+            vi.stubGlobal('fetch', vi.fn(() => mockErrorResponse(500, 'Internal Server Error')))
+            render(<StockTable />)
+
+            expect(await screen.findByText(/Failed to load stock data/i)).toBeInTheDocument()
+            expect(screen.queryByRole('heading', { name: 'Daily prices' })).not.toBeInTheDocument()
+        })
+
+        it('says when there is no data', async () => {
+            vi.stubGlobal('fetch', vi.fn(() => mockEmptyResponse()))
+            render(<StockTable />)
+
+            expect(await screen.findByText(/No data available for the selected parameters/i)).toBeInTheDocument()
+        })
+    })
+
+    it('does not nest buttons inside buttons', async () => {
+        render(<StockTable />)
+        await waitForData()
+
+        expect(document.querySelectorAll('button button')).toHaveLength(0)
     })
 })
-

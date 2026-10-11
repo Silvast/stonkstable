@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { render, screen, waitFor, within } from './test/utils/testHelpers'
+import { render, screen, waitFor, within, chooseExchange, exchangeButton } from './test/utils/testHelpers'
 import { render as renderWithoutTestProviders } from '@testing-library/react'
 import App from './App'
 import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
@@ -13,10 +13,10 @@ describe('App Component', () => {
         vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
     })
 
-    it('provides its own contexts so it renders without the test providers', () => {
+    it('provides its own contexts so it renders without the test providers', async () => {
         renderWithoutTestProviders(<App />)
 
-        expect(screen.getAllByRole('button', { name: 'Add AAPL to favourites' }).length).toBeGreaterThan(0)
+        expect((await screen.findAllByRole('button', { name: 'Add AAPL to favourites' })).length).toBeGreaterThan(0)
     })
 
     it('hides sign-in when no backend is configured', () => {
@@ -69,9 +69,7 @@ describe('App Component', () => {
     it('defaults to Stock Table page', async () => {
         render(<App />)
 
-        await waitFor(() => {
-            expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
-        })
+        expect(await screen.findByRole('heading', { name: 'Daily prices' })).toBeInTheDocument()
 
         const stockTableButton = screen.getByRole('button', { name: /Stock Table/i })
         expect(stockTableButton).toHaveAttribute('aria-current', 'page')
@@ -82,16 +80,14 @@ describe('App Component', () => {
         render(<App />)
 
         // Stock table visible by default
-        await waitFor(() => {
-            expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
-        })
+        expect(await screen.findByRole('heading', { name: 'Daily prices' })).toBeInTheDocument()
 
         const analysisButton = screen.getByRole('button', { name: /Analysis/i })
         await user.click(analysisButton)
 
         expect(analysisButton).toHaveAttribute('aria-current', 'page')
         expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
-        expect(screen.queryByText(/Stock Search Options/i)).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Fetch' })).not.toBeInTheDocument()
 
         // Buttons remain visible on Analysis page
         expect(screen.getByRole('button', { name: /Stock Table/i })).toBeInTheDocument()
@@ -101,17 +97,14 @@ describe('App Component', () => {
         await user.click(stockTableButton)
 
         expect(stockTableButton).toHaveAttribute('aria-current', 'page')
-        await waitFor(() => {
-            expect(screen.getByText(/Stock Search Options/i)).toBeInTheDocument()
-        })
+        expect(await screen.findByRole('heading', { name: 'Daily prices' })).toBeInTheDocument()
     })
 
     it('keeps the chosen stock and exchange when switching tabs', async () => {
         const user = userEvent.setup()
         render(<App />)
 
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        await chooseExchange(user, 'HE')
         const stockInput = screen.getByRole('combobox', { name: /Stock Symbol/i })
         await user.type(stockInput, 'NOKIA')
         await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
@@ -119,8 +112,7 @@ describe('App Component', () => {
         await user.click(screen.getByRole('button', { name: /Analysis/i }))
         await user.click(screen.getByRole('button', { name: /Stock Table/i }))
 
-        expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
-        expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('HE')
+        expect(exchangeButton('HE')).toHaveAttribute('aria-pressed', 'true')
         expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
     })
 
@@ -128,8 +120,7 @@ describe('App Component', () => {
         const user = userEvent.setup()
         render(<App />)
 
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        await chooseExchange(user, 'HE')
         await user.type(screen.getByRole('combobox', { name: /Stock Symbol/i }), 'NOKIA')
         await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
@@ -150,7 +141,7 @@ describe('App Component', () => {
 
             expect(favouritesNav()).toHaveTextContent(/^Favourites$/)
 
-            await user.click(screen.getAllByRole('button', { name: 'Add AAPL to favourites' })[0])
+            await user.click((await screen.findAllByRole('button', { name: 'Add AAPL to favourites' }))[0])
 
             expect(favouritesNav()).toHaveTextContent(/^Favourites1$/)
         })
@@ -159,7 +150,7 @@ describe('App Component', () => {
             const user = userEvent.setup()
             render(<App />)
 
-            await user.click(screen.getAllByRole('button', { name: 'Add AAPL to favourites' })[0])
+            await user.click((await screen.findAllByRole('button', { name: 'Add AAPL to favourites' }))[0])
             await user.click(favouritesNav())
 
             expect(favouritesNav()).toHaveAttribute('aria-current', 'page')
@@ -176,7 +167,7 @@ describe('App Component', () => {
             await user.click(screen.getByRole('button', { name: 'Show NOKIA in Stock Table' }))
 
             expect(screen.getByRole('button', { name: /^Stock table$/ })).toHaveAttribute('aria-current', 'page')
-            expect(await screen.findByText(/\(NOKIA\.HE\)/)).toBeInTheDocument()
+            expect(await screen.findByText('NOKIA.HE')).toBeInTheDocument()
             expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
         })
     })

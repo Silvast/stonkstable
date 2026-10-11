@@ -1,91 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Box,
-  TableSortLabel,
-  CircularProgress,
-  Button,
-  Typography,
-  Stack,
-  useMediaQuery,
-  useTheme,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material';
-import { visuallyHidden } from '@mui/utils';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Button, CircularProgress, Popover, Stack, Typography } from '@mui/material';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import SearchIcon from '@mui/icons-material/Search';
-
-
-import {
-  Order,
-  StockData,
-  COLUMNS,
-  getComparator,
-  stableSort,
-  renderCellContent,
-  fetchStockDataFromApi
-} from '../../utils/stockTable';
-
+import { StockData, fetchStockDataFromApi } from '../../utils/stockTable';
+import { formatDateRange, summarisePrices } from '../../utils/priceStats';
 import { useStockSelection } from '../../context/StockSelectionContext';
-import StockSelector from '../StockSelector/StockSelector';
-import FavouriteToggle from '../Favourites/FavouriteToggle';
-
-type ColumnId = keyof StockData | 'changePercent' | 'prevDayChangePercent';
+import StockSearchField from '../StockSelector/StockSearchField';
+import ExchangeToggle from '../StockSelector/ExchangeToggle';
+import Panel from '../common/Panel';
+import StockHeader, { FetchedStock } from './StockHeader';
+import KpiTiles from './KpiTiles';
+import PriceChartPanel from './PriceChartPanel';
+import PricesTable from './PricesTable';
 
 const StockTable = () => {
-  const theme = useTheme();
-  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const isSmScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-
-
-  const [formExpanded, setFormExpanded] = useState(!isXsScreen);
-
-  const getVisibleColumns = useCallback(() => {
-    if (isXsScreen) {
-      return COLUMNS
-        .filter(col => col.responsiveVisibility?.xs)
-        .map(col => col.id);
-    } else if (isSmScreen) {
-      return COLUMNS
-        .filter(col => col.responsiveVisibility?.sm)
-        .map(col => col.id);
-    } else if (isMdScreen) {
-      return COLUMNS
-        .filter(col => col.responsiveVisibility?.md)
-        .map(col => col.id);
-    } else {
-      return COLUMNS.map(col => col.id);
-    }
-  }, [isXsScreen, isSmScreen, isMdScreen]);
-
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(getVisibleColumns());
-
-  useEffect(() => {
-    setVisibleColumns(getVisibleColumns());
-  }, [isXsScreen, isSmScreen, isMdScreen, getVisibleColumns]);
-
+  const { symbol, exchange, apiKey, selectedStock } = useStockSelection();
   const [data, setData] = useState<StockData[]>([]);
-  const [order, setOrder] = useState<Order>('desc');
-  const [orderBy, setOrderBy] = useState<ColumnId>('date');
+  const [fetched, setFetched] = useState<FetchedStock | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { symbol, exchange: stockExchange, apiKey, selectedStock } = useStockSelection();
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(20, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs().subtract(1, 'day'));
+  const [datesAnchor, setDatesAnchor] = useState<HTMLElement | null>(null);
+
+  const summary = useMemo(() => summarisePrices(data), [data]);
 
   const fetchStockData = async () => {
     if (!startDate || !endDate) {
@@ -93,20 +34,16 @@ const StockTable = () => {
       return;
     }
 
+    const request: FetchedStock = { symbol, exchange, stock: selectedStock };
     try {
       setLoading(true);
       setError(null);
 
-      const result = await fetchStockDataFromApi(
-        symbol,
-        stockExchange,
-        startDate,
-        endDate,
-        apiKey
-      );
+      const result = await fetchStockDataFromApi(symbol, exchange, startDate, endDate, apiKey);
 
       setData(result.data);
       setError(result.error);
+      setFetched(request);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching stock data:', err);
@@ -120,314 +57,67 @@ const StockTable = () => {
     fetchStockData();
   }, []);
 
-  const handleRequestSort = (
-    _event: React.MouseEvent<unknown>,
-    property: ColumnId
-  ) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     fetchStockData();
   };
 
-  const visibleRows = React.useMemo(
-    () => stableSort(data, getComparator(order, orderBy, data)),
-    [data, order, orderBy],
-  );
-
-  const EnhancedTableHead: React.FC<{
-    onRequestSort: (event: React.MouseEvent<unknown>, property: ColumnId) => void;
-    order: Order;
-    orderBy: ColumnId;
-    visibleColumns: string[];
-  }> = ({ order, orderBy, onRequestSort, visibleColumns }) => {
-    const createSortHandler = (property: ColumnId) => (event: React.MouseEvent<unknown>) => {
-      onRequestSort(event, property);
-    };
-
-    return (
-      <TableHead>
-        <TableRow>
-          {COLUMNS.map((column) => (
-            visibleColumns.includes(column.id) && (
-              <TableCell
-                key={column.id}
-                align='left'
-                sortDirection={orderBy === column.id ? order : false}
-                sx={{
-                  padding: { xs: '4px 4px', sm: '10px 20px' },
-                  fontSize: { xs: '0.8rem', sm: '1rem' },
-                  fontWeight: 'bold',
-                  whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                  width: {
-                    xs: column.id === 'date' ? '20%' :
-                      column.id === 'open' ? '20%' :
-                        column.id === 'close' ? '20%' :
-                          column.id === 'changePercent' ? '20%' :
-                            column.id === 'prevDayChangePercent' ? '20%' : 'auto',
-                    sm: 'auto'
-                  }
-                }}
-              >
-                <TableSortLabel
-                  active={orderBy === column.id}
-                  direction={orderBy === column.id ? order : 'asc'}
-                  onClick={createSortHandler(column.id)}
-                  sx={{
-                    '& .MuiTableSortLabel-icon': {
-                      fontSize: { xs: '0.9rem', sm: '1rem' }
-                    }
-                  }}
-                >
-                  {column.label}
-                  {orderBy === column.id ? (
-                    <Box component="span" sx={visuallyHidden}>
-                      {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                    </Box>
-                  ) : null}
-                </TableSortLabel>
-              </TableCell>
-            )
-          ))}
-        </TableRow>
-      </TableHead>
-    );
-  };
+  const rangeLabel = startDate && endDate ? formatDateRange(startDate, endDate) : 'Choose dates';
 
   return (
-    <Box sx={{
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      mx: 'auto'
-    }}>
-      {/* Input controls for symbol, stock exchange, API key, and date range */}
-      <Accordion
-        expanded={formExpanded}
-        onChange={() => setFormExpanded(!formExpanded)}
-        sx={{
-          mb: { xs: formExpanded ? 2 : 0.5, sm: formExpanded ? 2 : 1 },
-          boxShadow: theme.shadows[1],
-          '&:before': {
-            display: 'none',
-          }
-        }}
-      >
-        <AccordionSummary
-          component="div"
-          expandIcon={<ExpandMoreIcon />}
-          aria-controls="search-panel-content"
-          id="search-panel-header"
-          sx={{
-            minHeight: { xs: 40, sm: 48 },
-            py: { xs: 0, sm: 0.5 },
-            '& .MuiAccordionSummary-content': {
-              margin: { xs: '6px 0', sm: '10px 0' },
-            },
-          }}
+    <Stack spacing={2}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, alignItems: 'center' }}>
+        <StockSearchField loading={loading} sx={{ flex: '1 1 320px' }} />
+        <ExchangeToggle />
+        <Button
+          variant="outlined"
+          startIcon={<CalendarMonthOutlinedIcon fontSize="small" />}
+          aria-label={`Date range ${rangeLabel}`}
+          onClick={(event) => setDatesAnchor(event.currentTarget)}
+          sx={{ minHeight: 44, fontWeight: 400 }}
         >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <SearchIcon fontSize={isXsScreen ? "small" : "small"} />
-            <Typography
-              variant={isXsScreen ? "body2" : "body1"}
-              sx={{
-                fontSize: { xs: '0.9rem', sm: 'inherit' }
-              }}
-            >
-              {isXsScreen ? 'Search' : 'Stock Search Options'} {symbol && `(${symbol}.${stockExchange})`}
-            </Typography>
-            <FavouriteToggle stock={selectedStock} exchange={stockExchange} size="small" stopPropagation />
-          </Stack>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
-          <form onSubmit={handleSubmit}>
-            <Stack
-              direction="column"
-              spacing={2}
-              alignItems="stretch"
-              mb={1}
-            >
-              <StockSelector loading={loading} />
-
-              {/* Second group: Date picker and Submit button */}
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={2}
-                alignItems={{ xs: 'stretch', md: 'flex-start' }}
-              >
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    width="100%"
-                  >
-                    <DatePicker
-                      label="From Date"
-                      value={startDate}
-                      onChange={(newValue) => {
-                        setStartDate(newValue);
-                      }}
-                      slotProps={{
-                        textField: {
-                          size: 'small',
-                          fullWidth: true,
-                          sx: {
-                            '& .MuiInputLabel-root': {
-                              fontSize: { xs: '0.9rem', sm: 'inherit' }
-                            },
-                            '& .MuiInputBase-input': {
-                              fontSize: { xs: '0.9rem', sm: 'inherit' }
-                            }
-                          }
-                        }
-                      }}
-                      sx={{ flexGrow: 1 }}
-                    />
-                    <DatePicker
-                      label="To Date"
-                      value={endDate}
-                      onChange={(newValue) => {
-                        setEndDate(newValue);
-                      }}
-                      slotProps={{
-                        textField: {
-                          size: 'small',
-                          fullWidth: true,
-                          sx: {
-                            '& .MuiInputLabel-root': {
-                              fontSize: { xs: '0.9rem', sm: 'inherit' }
-                            },
-                            '& .MuiInputBase-input': {
-                              fontSize: { xs: '0.9rem', sm: 'inherit' }
-                            }
-                          }
-                        }
-                      }}
-                      sx={{ flexGrow: 1 }}
-                    />
-                  </Stack>
-                </LocalizationProvider>
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={loading}
-                  sx={{
-                    height: { md: 40 },
-                    alignSelf: { md: 'center' },
-                    mt: { xs: 0, md: 2 },
-                    width: { xs: '100%', md: 150 },
-                    fontSize: { xs: '0.9rem', sm: 'inherit' }
-                  }}
-                >
-                  Fetch Data
-                </Button>
-              </Stack>
+          {rangeLabel}
+        </Button>
+        <Popover
+          open={datesAnchor !== null}
+          anchorEl={datesAnchor}
+          onClose={() => setDatesAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        >
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ p: 2 }}>
+              <DatePicker label="From Date" value={startDate} onChange={setStartDate} slotProps={{ textField: { size: 'small' } }} />
+              <DatePicker label="To Date" value={endDate} onChange={setEndDate} slotProps={{ textField: { size: 'small' } }} />
             </Stack>
-          </form>
-        </AccordionDetails>
-      </Accordion>
+          </LocalizationProvider>
+        </Popover>
+        <Button type="submit" variant="contained" disabled={loading} sx={{ minHeight: 44, px: 2.5, fontWeight: 600 }}>
+          Fetch
+        </Button>
+      </Box>
 
-      {/* Stock data table */}
-      <Paper
-        sx={{
-          width: '100%',
-          mb: 2,
-          overflow: 'hidden',
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          height: formExpanded ? 'auto' : { xs: 'calc(100vh - 150px)', sm: 'calc(100vh - 180px)' },
-        }}
-      >
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Box sx={{ color: 'error.main', p: 3, textAlign: 'center' }}>
-            {error}
-          </Box>
-        ) : data.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography>No data available</Typography>
-          </Box>
-        ) : (
-          <TableContainer sx={{
-            maxHeight: formExpanded ? 800 : { xs: 'calc(100vh - 160px)', sm: 'calc(100vh - 190px)' },
-            overflowX: { xs: 'auto', sm: 'hidden' },
-            flexGrow: 1
-          }}>
-            <Table
-              stickyHeader
-              aria-label="sticky table"
-              size="small"
-              sx={{
-                tableLayout: { xs: 'auto', sm: 'auto' },
-                minWidth: { xs: 600, sm: 'auto' },
-                borderSpacing: 0,
-                borderCollapse: 'collapse',
-                width: '100%',
-                '& .MuiTableCell-root': {
-                  padding: { xs: '4px 8px', sm: '10px 20px' },
-                  fontSize: { xs: '0.8rem', sm: '1rem' },
-                  borderBottom: '1px solid rgba(224, 224, 224, 0.3)'
-                }
-              }}
-            >
-              <EnhancedTableHead
-                order={order}
-                orderBy={orderBy}
-                onRequestSort={handleRequestSort}
-                visibleColumns={visibleColumns}
-              />
-              <TableBody>
-                {visibleRows.map((row, index) => (
-                  <TableRow
-                    hover
-                    key={index}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  >
-                    {COLUMNS.map((column) => (
-                      visibleColumns.includes(column.id) && (
-                        <TableCell
-                          key={column.id}
-                          align='left'
-                          sx={{
-                            padding: { xs: '4px 4px', sm: '10px 20px' },
-                            fontSize: { xs: '0.8rem', sm: '1rem' },
-                            whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            width: {
-                              xs: column.id === 'date' ? '20%' :
-                                column.id === 'open' ? '20%' :
-                                  column.id === 'close' ? '20%' :
-                                    column.id === 'changePercent' ? '20%' :
-                                      column.id === 'prevDayChangePercent' ? '20%' : 'auto',
-                              sm: 'auto'
-                            }
-                          }}
-                        >
-                          {renderCellContent(row, column, data)}
-                        </TableCell>
-                      )
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
-    </Box>
+      {loading && (
+        <Panel sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Panel>
+      )}
+
+      {!loading && error && <Alert severity="error">{error}</Alert>}
+
+      {!loading && !error && fetched && summary && (
+        <>
+          <StockHeader fetched={fetched} summary={summary} />
+          <KpiTiles summary={summary} />
+          <PriceChartPanel rows={data} />
+          <PricesTable rows={data} code={`${fetched.symbol}.${fetched.exchange}`} />
+        </>
+      )}
+
+      <Typography variant="caption" component="p" color="text.secondary">
+        End-of-day data from EODHD. Not investment advice.
+      </Typography>
+    </Stack>
   );
 };
 
-export default StockTable; 
+export default StockTable;

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
-import { render, screen, waitFor, act } from '../test/utils/testHelpers'
+import { render, screen, waitFor, act, chooseExchange, exchangeButton } from '../test/utils/testHelpers'
 import Analysis from './Analysis'
 import { makeSeries } from '../test/mocks/eodSeries'
 import { mockNewsPayload, mockJsonResponse } from '../test/mocks/newsApi'
@@ -39,7 +39,7 @@ describe('Analysis page', () => {
         render(<Analysis />)
 
         expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Apple Inc (AAPL)')
-        expect(screen.getByLabelText(/Exchange/i)).toHaveTextContent('US')
+        expect(exchangeButton('US')).toHaveAttribute('aria-pressed', 'true')
         expect(screen.getByText(/AAPL\.US · Apple Inc/)).toBeInTheDocument()
         expect(tradingViewLink()).toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=AAPL')
         expect(tradingViewLink()).toHaveAttribute('target', '_blank')
@@ -137,8 +137,7 @@ describe('Analysis page', () => {
         stubFetch()
         render(<Analysis />)
 
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'HE' }))
+        await chooseExchange(user, 'HE')
         await user.type(screen.getByRole('combobox', { name: /Stock Symbol/i }), 'NOKIA')
         await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
@@ -156,8 +155,7 @@ describe('Analysis page', () => {
         render(<Analysis />)
 
         await user.click(analyzeButton())
-        await user.click(screen.getByLabelText(/Exchange/i))
-        await user.click(await screen.findByRole('option', { name: 'LSE' }))
+        await chooseExchange(user, 'LSE')
         await act(async () => {
             release()
             await new Promise(resolve => setTimeout(resolve, 50))
