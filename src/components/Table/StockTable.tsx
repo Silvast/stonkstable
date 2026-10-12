@@ -108,8 +108,8 @@ const StockTable = () => {
         <>
           <StockHeader fetched={fetched} summary={summary} />
           <KpiTiles summary={summary} />
-          <PriceChartPanel rows={data} />
           <PricesTable rows={data} code={`${fetched.symbol}.${fetched.exchange}`} />
+          <PriceChartPanel rows={data} />
         </>
       )}
 

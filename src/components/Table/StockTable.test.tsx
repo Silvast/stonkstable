@@ -174,6 +174,83 @@ describe('StockTable Component', () => {
         })
     })
 
+    describe('Layout', () => {
+        it('shows the daily prices table above the chart', async () => {
+            render(<StockTable />)
+            await waitForData()
+
+            const table = screen.getByRole('heading', { name: 'Daily prices' })
+            const chart = screen.getByRole('heading', { name: 'Close and volume' })
+            expect(table.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+        })
+    })
+
+    describe('Full-screen table', () => {
+        const openFullScreen = async (user: ReturnType<typeof userEvent.setup>) => {
+            await user.click(screen.getByRole('button', { name: 'Open table in full screen' }))
+            return screen.findByRole('dialog', { name: 'Daily prices for AAPL.US' })
+        }
+
+        it('opens the table in a full-screen view with every row and the CSV button', async () => {
+            const user = userEvent.setup()
+            render(<StockTable />)
+            await waitForData()
+
+            const dialog = await openFullScreen(user)
+
+            const rows = within(within(dialog).getByRole('table')).getAllByRole('row').slice(1)
+            expect(rows).toHaveLength(5)
+            expect(within(dialog).getByRole('button', { name: 'CSV' })).toBeInTheDocument()
+            expect(within(dialog).queryByRole('button', { name: 'Open table in full screen' })).not.toBeInTheDocument()
+        })
+
+        it('closes back to the page', async () => {
+            const user = userEvent.setup()
+            render(<StockTable />)
+            await waitForData()
+            const dialog = await openFullScreen(user)
+
+            await user.click(within(dialog).getByRole('button', { name: 'Close full screen' }))
+
+            await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+            expect(screen.getByRole('button', { name: 'Open table in full screen' })).toBeInTheDocument()
+        })
+
+        it('shows every column in full screen even on a phone', async () => {
+            const user = userEvent.setup()
+            const matchMedia = window.matchMedia
+            window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+                ...matchMedia(query),
+                matches: query.includes('max-width:599.95px'),
+            }))
+            try {
+                render(<StockTable />)
+                await waitForData()
+                const pageHeaders = within(screen.getByRole('table', { name: /Daily prices/ })).getAllByRole('columnheader')
+                expect(pageHeaders).toHaveLength(5)
+
+                const dialog = await openFullScreen(user)
+
+                expect(within(within(dialog).getByRole('table')).getAllByRole('columnheader')).toHaveLength(8)
+            } finally {
+                window.matchMedia = matchMedia
+            }
+        })
+
+        it('keeps the same sort order on the page and in full screen', async () => {
+            const user = userEvent.setup()
+            render(<StockTable />)
+            await waitForData()
+
+            await user.click(screen.getByRole('button', { name: /^Close/ }))
+            const dialog = await openFullScreen(user)
+
+            const closes = within(within(dialog).getByRole('table')).getAllByRole('row').slice(1)
+                .map(row => within(row).getAllByRole('cell')[4].textContent)
+            expect(closes).toEqual(['145.00', '148.00', '150.00', '150.00', '155.00'])
+        })
+    })
+
     describe('Daily prices table', () => {
         it('shows one row per day, newest first, with formatted dates and volumes', async () => {
             render(<StockTable />)
