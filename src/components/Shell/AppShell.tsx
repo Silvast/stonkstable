@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AppBar, Box, Drawer, IconButton, Toolbar, Tooltip, useMediaQuery, useTheme } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import Sidebar, { Logo, Page, SIDEBAR_ID } from './Sidebar';
+import Footer from './Footer';
 import { tokens } from '../../theme';
 
 const SIDEBAR_KEY = 'stonkstable:sidebar:v1';
@@ -18,7 +19,15 @@ const mainSx = {
   boxSizing: 'border-box',
   px: { xs: 2, md: 3, lg: 4 },
   pt: { xs: 2, md: 2.5 },
-  pb: 5,
+  pb: 3,
+  display: 'flex',
+  flexDirection: 'column',
+} as const;
+
+const contentSx = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
 } as const;
 
 const loadHidden = (): boolean => {
@@ -99,21 +108,27 @@ const AppShell = ({ currentPage, onNavigate, children }: AppShellProps) => {
     };
 
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: tokens.ground }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: tokens.ground, display: 'flex', flexDirection: 'column' }}>
         <TopBar label="Open navigation" onOpen={() => setDrawerOpen(true)} />
         <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <Sidebar currentPage={currentPage} onNavigate={navigate} />
         </Drawer>
-        <Box component="main" sx={mainSx}>{children}</Box>
+        <Box component="main" sx={mainSx}>
+          <Box sx={contentSx}>{children}</Box>
+          <Footer />
+        </Box>
       </Box>
     );
   }
 
   if (sidebarHidden) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: tokens.ground }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: tokens.ground, display: 'flex', flexDirection: 'column' }}>
         <TopBar label="Show sidebar" onOpen={() => setHidden(false)} buttonRef={showButton} controls={SIDEBAR_ID} />
-        <Box component="main" sx={mainSx}>{children}</Box>
+        <Box component="main" sx={mainSx}>
+          <Box sx={contentSx}>{children}</Box>
+          <Footer />
+        </Box>
       </Box>
     );
   }
@@ -135,7 +150,10 @@ const AppShell = ({ currentPage, onNavigate, children }: AppShellProps) => {
       >
         <Sidebar currentPage={currentPage} onNavigate={onNavigate} onHide={() => setHidden(true)} hideButtonRef={hideButton} />
       </Box>
-      <Box component="main" sx={mainSx}>{children}</Box>
+      <Box component="main" sx={mainSx}>
+        <Box sx={contentSx}>{children}</Box>
+        <Footer />
+      </Box>
     </Box>
   );
 };
