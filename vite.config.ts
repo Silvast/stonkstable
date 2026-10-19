@@ -1,9 +1,10 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { buildInfoPlugin } from './vite-plugins/build-info';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), buildInfoPlugin()],
   server: {
     proxy: {
       '/api/eodhd': {
@@ -13,4 +14,4 @@ export default defineConfig({
       },
     },
   },
-}) 
+});
