@@ -60,7 +60,7 @@ describe('StockTable Component', () => {
         it('shows the date range on a button that opens the date pickers', async () => {
             const user = userEvent.setup()
             render(<StockTable />)
-            const start = dayjs().subtract(20, 'day')
+            const start = dayjs().subtract(6, 'week')
             const end = dayjs().subtract(1, 'day')
             const label = `${start.format(start.year() === end.year() ? 'D MMM' : 'D MMM YYYY')} – ${end.format('D MMM YYYY')}`
 
@@ -68,6 +68,23 @@ describe('StockTable Component', () => {
 
             expect(await screen.findByLabelText(/From Date/i)).toBeInTheDocument()
             expect(screen.getByLabelText(/To Date/i)).toBeInTheDocument()
+        })
+
+        it('defaults the from-date to six weeks before today', async () => {
+            const fetchSpy = vi.fn((_url: string) => mockSuccessResponse(mockStockData))
+            vi.stubGlobal('fetch', fetchSpy)
+            render(<StockTable />)
+            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+
+            const expectedFrom = dayjs().subtract(6, 'week').format('YYYY-MM-DD')
+            const expectedTo = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+            const calledUrl = fetchSpy.mock.calls[0][0] as string
+            expect(calledUrl).toContain(`from=${expectedFrom}`)
+            expect(calledUrl).toContain(`to=${expectedTo}`)
+
+            // sanity check: the from-date must be more than 14 days back
+            const daysBetween = dayjs(expectedTo).diff(dayjs(expectedFrom), 'day')
+            expect(daysBetween).toBeGreaterThan(14)
         })
 
         it('fetches once on load and again when Fetch is pressed', async () => {
@@ -157,8 +174,8 @@ describe('StockTable Component', () => {
 
             const tile = (label: string) => screen.getByText(label).parentElement!
             expect(tile('Period change')).toHaveTextContent('+3.33%')
-            expect(tile('20-day high')).toHaveTextContent('156.00')
-            expect(tile('20-day low')).toHaveTextContent('143.00')
+            expect(tile('42-day high')).toHaveTextContent('156.00')
+            expect(tile('42-day low')).toHaveTextContent('143.00')
             expect(tile('Avg. volume')).toHaveTextContent('1M')
             expect(tile('Up days')).toHaveTextContent('2 / 5')
         })
