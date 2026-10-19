@@ -11,8 +11,8 @@ const KpiTiles = ({ summary }: { summary: PriceSummary }) => {
       value: `${summary.periodChangePercent > 0 ? '+' : ''}${summary.periodChangePercent.toFixed(2)}%`,
       color: changeColor(summary.periodChangePercent),
     },
-    { label: '20-day high', value: summary.high.toFixed(2), color: tokens.text },
-    { label: '20-day low', value: summary.low.toFixed(2), color: tokens.text },
+    { label: '42-day high', value: summary.high.toFixed(2), color: tokens.text },
+    { label: '42-day low', value: summary.low.toFixed(2), color: tokens.text },
     { label: 'Avg. volume', value: formatVolume(Math.round(summary.averageVolume)), color: tokens.text },
     { label: 'Up days', value: `${summary.upDays} / ${summary.days}`, color: tokens.text },
   ];
