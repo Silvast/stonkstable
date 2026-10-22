@@ -22,8 +22,6 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import DesktopWindowsOutlinedIcon from '@mui/icons-material/DesktopWindowsOutlined';
-import CheckIcon from '@mui/icons-material/Check';
 import dayjs from 'dayjs';
 import { ExchangeCode, useStockSelection } from '../context/StockSelectionContext';
 import { useFavourites } from '../context/FavouritesContext';
@@ -33,6 +31,7 @@ import { BiasShortLabel, FavouriteSnapshot, favouriteSnapshot } from '../utils/f
 import { Order, stableSort } from '../utils/stockTable';
 import Panel from '../components/common/Panel';
 import SegmentedControl from '../components/common/SegmentedControl';
+import StatusChip from '../components/common/StatusChip';
 import { CodeChip, ToneChip, Tone } from '../components/common/Chips';
 import { mono, tokens } from '../theme';
 
@@ -77,27 +76,6 @@ const Sparkline = ({ code, snapshot }: { code: string; snapshot: FavouriteSnapsh
     </svg>
   );
 };
-
-const StatusChip = ({ synced }: { synced: boolean }) => (
-  <Box
-    component="span"
-    sx={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 0.75,
-      px: 1.25,
-      py: '3px',
-      borderRadius: 999,
-      fontSize: 12,
-      fontWeight: 500,
-      bgcolor: synced ? tokens.upTint : tokens.warningTint,
-      color: synced ? tokens.upOnTint : tokens.warningOnTint,
-    }}
-  >
-    {synced ? <CheckIcon sx={{ fontSize: 13 }} /> : <DesktopWindowsOutlinedIcon sx={{ fontSize: 13 }} />}
-    {synced ? 'Synced to your account' : 'Saved in this browser only'}
-  </Box>
-);
 
 const OpenButton = ({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) => (
   <Tooltip title={label}>

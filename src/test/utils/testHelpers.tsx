@@ -5,6 +5,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { StockSelectionProvider } from '../../context/StockSelectionContext'
 import { FavouritesProvider } from '../../context/FavouritesContext'
+import { TradesProvider } from '../../context/TradesContext'
 import { AuthProvider } from '../../context/AuthContext'
 import { theme } from '../../theme'
 
@@ -19,7 +20,9 @@ const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
                 <AuthProvider>
                     <StockSelectionProvider>
                         <FavouritesProvider>
-                            {children}
+                            <TradesProvider>
+                                {children}
+                            </TradesProvider>
                         </FavouritesProvider>
                     </StockSelectionProvider>
                 </AuthProvider>

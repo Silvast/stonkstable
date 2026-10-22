@@ -5,8 +5,10 @@ import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrow
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { useAuth } from '../../context/AuthContext';
 import { useFavourites } from '../../context/FavouritesContext';
+import { useTrades } from '../../context/TradesContext';
 import { useStockSelection } from '../../context/StockSelectionContext';
 import { ToneChip, Tone } from '../common/Chips';
 import { BiasShortLabel, FavouriteSnapshot, favouriteSnapshot } from '../../utils/favouriteSnapshot';
@@ -15,7 +17,7 @@ import { useApiCallsToday } from '../../hooks/useApiCallsToday';
 import ApiKeyDialog from '../Account/ApiKeyDialog';
 import { mono, tokens } from '../../theme';
 
-export type Page = 'stock-table' | 'analysis' | 'favourites' | 'settings';
+export type Page = 'stock-table' | 'analysis' | 'favourites' | 'trades' | 'settings';
 
 interface SidebarProps {
   currentPage: Page;
@@ -266,6 +268,7 @@ const Watchlist = ({ page }: { page: Page }) => {
 
 const Sidebar = ({ currentPage, onNavigate, onHide, hideButtonRef }: SidebarProps) => {
   const { favourites } = useFavourites();
+  const { open } = useTrades();
 
   return (
     <Box
@@ -317,6 +320,13 @@ const Sidebar = ({ currentPage, onNavigate, onHide, hideButtonRef }: SidebarProp
           active={currentPage === 'favourites'}
           onClick={() => onNavigate('favourites')}
           badge={favourites.length}
+        />
+        <NavItem
+          icon={<ReceiptLongOutlinedIcon />}
+          label="Trades"
+          active={currentPage === 'trades'}
+          onClick={() => onNavigate('trades')}
+          badge={open.length}
         />
       </Box>
       <Watchlist page={currentPage} />

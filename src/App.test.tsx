@@ -5,6 +5,7 @@ import { render as renderWithoutTestProviders } from '@testing-library/react'
 import App from './App'
 import { mockStockData, mockSuccessResponse } from './test/mocks/stockApi'
 import { saveFavourites } from './utils/favouritesStorage'
+import { saveTrades } from './utils/tradesStorage'
 
 describe('App Component', () => {
     beforeEach(() => {
@@ -32,7 +33,7 @@ describe('App Component', () => {
         expect(within(sidebar).getByText('Stonkstable')).toBeInTheDocument()
         const nav = within(sidebar).getByRole('navigation', { name: 'Sections' })
         expect(within(nav).getAllByRole('button').map(button => button.textContent)).toEqual([
-            'Stock table', 'Analysis', 'Favourites',
+            'Stock table', 'Analysis', 'Favourites', 'Trades',
         ])
         expect(within(nav).getByRole('button', { name: 'Stock table' })).toHaveAttribute('aria-current', 'page')
     })
@@ -134,6 +135,7 @@ describe('App Component', () => {
     })
 
     describe('Favourites', () => {
+
         const favouritesNav = () => screen.getByRole('button', { name: /^Favourites/ })
 
         it('has a Favourites nav button whose count follows the starred stocks', async () => {
@@ -170,6 +172,31 @@ describe('App Component', () => {
             expect(screen.getByRole('button', { name: /^Stock table$/ })).toHaveAttribute('aria-current', 'page')
             expect(await screen.findByText('NOKIA.HE')).toBeInTheDocument()
             expect(screen.getByRole('combobox', { name: /Stock Symbol/i })).toHaveValue('Nokia Oyj (NOKIA)')
+        })
+    })
+
+    describe('Trades', () => {
+        const tradesNav = () => screen.getByRole('button', { name: /^Trades/ })
+
+        it('has a Trades nav button whose count follows the open positions', async () => {
+            const user = userEvent.setup()
+            saveTrades([{
+                id: 't1',
+                instrument: 'MINI L NOKIA NORDNET FI24',
+                quantity: 200,
+                currency: 'EUR',
+                open: { price: 1.62, commission: 0, date: '2026-10-09' },
+                createdAt: '2026-10-09T08:00:00.000Z',
+            }])
+            render(<App />)
+
+            expect(tradesNav()).toHaveTextContent('Trades1')
+
+            await user.click(tradesNav())
+
+            expect(tradesNav()).toHaveAttribute('aria-current', 'page')
+            expect(screen.getByRole('heading', { name: 'Trades' })).toBeInTheDocument()
+            expect(screen.getByText('MINI L NOKIA NORDNET FI24')).toBeInTheDocument()
         })
     })
 })
