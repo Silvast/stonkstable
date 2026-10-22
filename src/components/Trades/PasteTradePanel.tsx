@@ -71,10 +71,13 @@ const PasteTradePanel = ({ focusSignal, onSaved }: PasteTradePanelProps): React.
         pasteRef.current?.focus();
     }, [focusSignal]);
 
-    const match = parsed?.ok ? findOpenMatch(parsed.order) : null;
+    const quantity = toNumber(draft.quantity);
+    // match against the edited instrument and quantity, not the originally parsed ones
+    const match = parsed?.ok && quantity !== null && quantity > 0
+        ? findOpenMatch({ ...parsed.order, instrument: draft.instrument, quantity })
+        : null;
     const closesPosition = Boolean(match) && parsed?.ok === true && parsed.order.side === 'sell' && !asNewPosition;
 
-    const quantity = toNumber(draft.quantity);
     const price = toNumber(draft.price);
     const commission = toNumber(draft.commission) ?? 0;
     const ready = draft.instrument.trim() !== '' && quantity !== null && quantity > 0 && price !== null && price > 0 && /^\d{4}-\d{2}-\d{2}$/.test(draft.date);
@@ -94,7 +97,7 @@ const PasteTradePanel = ({ focusSignal, onSaved }: PasteTradePanelProps): React.
         const leg = { price, commission: Math.max(0, commission), date: draft.date };
 
         if (closesPosition && match && parsed?.ok) {
-            closeTrade(match.id, leg, parsed.order.quantity < match.quantity ? parsed.order.quantity : undefined);
+            closeTrade(match.id, leg, quantity < match.quantity ? quantity : undefined);
             onSaved(`Closed ${draft.instrument.trim()}`);
         } else {
             const trade = addTrade({
