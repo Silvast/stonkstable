@@ -21,6 +21,7 @@ const stubFetch = ({ eodStatus = 200, newsStatus = 200 } = {}) => {
 
 const analyzeButton = () => screen.getByRole('button', { name: 'Analyse' })
 const tradingViewLink = () => screen.getByRole('link', { name: /Open in TradingView/i })
+const nordnetLink = () => screen.getByRole('link', { name: /Open in Nordnet/i })
 const expectAllCards = async () => {
     for (const name of CARD_HEADINGS) {
         expect(await screen.findByRole('heading', { name })).toBeInTheDocument()
@@ -45,6 +46,9 @@ describe('Analysis page', () => {
         expect(tradingViewLink()).toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=AAPL')
         expect(tradingViewLink()).toHaveAttribute('target', '_blank')
         expect(tradingViewLink()).toHaveAttribute('rel', 'noopener noreferrer')
+        expect(nordnetLink()).toHaveAttribute('href', 'https://www.nordnet.fi/etsi?q=AAPL')
+        expect(nordnetLink()).toHaveAttribute('target', '_blank')
+        expect(nordnetLink()).toHaveAttribute('rel', 'noopener noreferrer')
     })
 
     it('does not fetch on mount and explains the Analyse button', () => {
@@ -145,6 +149,7 @@ describe('Analysis page', () => {
         await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
 
         expect(tradingViewLink()).toHaveAttribute('href', 'https://www.tradingview.com/chart/?symbol=OMXHEX%3ANOKIA')
+        expect(nordnetLink()).toHaveAttribute('href', 'https://www.nordnet.fi/etsi?q=NOKIA')
     })
 
     it('drops a response that arrives after the selection changed', async () => {

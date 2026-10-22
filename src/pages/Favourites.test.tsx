@@ -168,5 +168,16 @@ describe('Favourites page', () => {
             expect(screen.getByTestId('selection')).toHaveTextContent('AMD.US')
             expect(onOpen).toHaveBeenCalledWith('stock-table')
         })
+
+        it('links every row to the Nordnet search for that ticker in a new tab', () => {
+            renderPage()
+
+            for (const [code, href] of [['AAPL', 'https://www.nordnet.fi/etsi?q=AAPL'], ['NOKIA', 'https://www.nordnet.fi/etsi?q=NOKIA']]) {
+                const link = screen.getByRole('link', { name: `Search ${code} in Nordnet` })
+                expect(link).toHaveAttribute('href', href)
+                expect(link).toHaveAttribute('target', '_blank')
+                expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+            }
+        })
     })
 })

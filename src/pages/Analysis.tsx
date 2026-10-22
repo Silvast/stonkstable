@@ -14,6 +14,7 @@ import { AnalysisResult, buildAnalysis } from '../utils/analysis';
 import { readCache, writeCache } from '../utils/analysisCache';
 import { fetchNewsFromApi } from '../utils/news';
 import { fetchStockDataFromApi } from '../utils/stockTable';
+import { nordnetUrl } from '../utils/nordnet';
 import { tradingViewUrl } from '../utils/tradingView';
 import { tokens } from '../theme';
 
@@ -85,6 +86,7 @@ const Analysis = (): React.ReactElement => {
   const name = selectedStock?.Name ?? symbol;
   const code = `${symbol}.${exchange}`;
   const tvHref = tradingViewUrl(symbol, exchange);
+  const nordnetHref = nordnetUrl(symbol, exchange, selectedStock?.Name);
 
   return (
     <Stack spacing={2}>
@@ -136,6 +138,16 @@ const Analysis = (): React.ReactElement => {
             Open in TradingView
             <OpenInNewIcon sx={{ fontSize: 14 }} />
           </Link>
+          <Link
+            href={nordnetHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="none"
+            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minHeight: 40, fontWeight: 600, alignSelf: 'flex-start' }}
+          >
+            Open in Nordnet
+            <OpenInNewIcon sx={{ fontSize: 14 }} />
+          </Link>
         </Panel>
       )}
 
@@ -150,6 +162,7 @@ const Analysis = (): React.ReactElement => {
             bias={result.bias}
             signals={result.signals}
             tradingViewHref={tvHref}
+            nordnetHref={nordnetHref}
           />
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
             <RsiCard rsi={result.rsi} />
