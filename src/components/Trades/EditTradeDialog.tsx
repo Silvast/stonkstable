@@ -51,14 +51,14 @@ const EditTradeDialog = ({ trade, onClose }: EditTradeDialogProps): React.ReactE
             quantity: numbers.quantity,
             open: {
                 price: numbers.buyPrice,
-                commission: parseFinnishNumber(buyCommission) ?? 0,
+                commission: Math.max(0, parseFinnishNumber(buyCommission) ?? 0),
                 date: buyDate,
             },
             ...(trade.close && numbers.sellPrice !== null
                 ? {
                     close: {
                         price: numbers.sellPrice,
-                        commission: parseFinnishNumber(sellCommission) ?? 0,
+                        commission: Math.max(0, parseFinnishNumber(sellCommission) ?? 0),
                         date: sellDate,
                     },
                 }

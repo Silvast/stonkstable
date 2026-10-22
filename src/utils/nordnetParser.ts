@@ -199,7 +199,9 @@ export function parseNordnetOrder(text: string): ParseResult {
   };
 
   const warnings: string[] = [];
-  if (total && Math.abs(total.value - order.quantity * order.price) > 0.01 && Math.abs(total.value - (order.quantity * order.price - order.commission)) > 0.01) {
+  const gross = order.quantity * order.price;
+  const expectedTotal = order.side === 'buy' ? gross + order.commission : gross - order.commission;
+  if (total && Math.abs(total.value - expectedTotal) > 0.01) {
     warnings.push(TOTAL_MISMATCH);
   }
 

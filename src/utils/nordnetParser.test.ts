@@ -27,7 +27,7 @@ const BUY = `Vahvista toimeksianto
 * Hinta/kpl: 1,62 EUR
 * Voimassaolo (valitun pvm. loppuun asti): 22.10.2026
 * Välityspalkkio: −1,00 EUR
-* Yhteensä: 161,00 EUR`
+* Yhteensä: 163,00 EUR`
 
 const parsed = (text: string) => {
     const result = parseNordnetOrder(text)
@@ -111,6 +111,18 @@ Hinta/kpl
 
         expect(result.order.quantity).toBe(100)
         expect(result.warnings).toEqual(["Total doesn't match quantity × price"])
+    })
+
+    it('does not warn for a buy with commission whose total is qty × price + commission', () => {
+        const result = parsed('Instrumentti\nNOKIA\nOsta/myy\nOstotoimeksianto\nMäärä100\nHinta/kpl1,62 EUR\nVälityspalkkio−1,00 EUR\nYhteensä163,00 EUR')
+
+        expect(result.warnings).toEqual([])
+    })
+
+    it('does not warn for a sell with commission whose total is qty × price − commission', () => {
+        const result = parsed('Instrumentti\nNOKIA\nOsta/myy\nMyyntitoimeksianto\nMäärä100\nHinta/kpl1,62 EUR\nVälityspalkkio−1,00 EUR\nYhteensä161,00 EUR')
+
+        expect(result.warnings).toEqual([])
     })
 
     it('reports a missing price', () => {
