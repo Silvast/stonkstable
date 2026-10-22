@@ -22,12 +22,14 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import dayjs from 'dayjs';
 import { ExchangeCode, useStockSelection } from '../context/StockSelectionContext';
 import { useFavourites } from '../context/FavouritesContext';
 import { useAuth } from '../context/AuthContext';
 import { FavouriteStock, favouriteId } from '../utils/favouritesStorage';
 import { BiasShortLabel, FavouriteSnapshot, favouriteSnapshot } from '../utils/favouriteSnapshot';
+import { nordnetUrl } from '../utils/nordnet';
 import { Order, stableSort } from '../utils/stockTable';
 import Panel from '../components/common/Panel';
 import SegmentedControl from '../components/common/SegmentedControl';
@@ -81,6 +83,21 @@ const OpenButton = ({ label, icon, onClick }: { label: string; icon: React.React
   <Tooltip title={label}>
     <IconButton aria-label={label} onClick={onClick} sx={{ width: 40, height: 40, border: `1px solid ${tokens.border}`, color: tokens.textIdle }}>
       {icon}
+    </IconButton>
+  </Tooltip>
+);
+
+const OpenLink = ({ label, href, children }: { label: string; href: string; children: React.ReactNode }) => (
+  <Tooltip title={label}>
+    <IconButton
+      component="a"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      sx={{ width: 40, height: 40, border: `1px solid ${tokens.border}`, color: tokens.textIdle }}
+    >
+      {children}
     </IconButton>
   </Tooltip>
 );
@@ -247,6 +264,9 @@ const Favourites = ({ onOpen }: FavouritesProps): React.ReactElement => {
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                           <OpenButton label={`Show ${fav.code} in Stock Table`} icon={<TableChartOutlinedIcon fontSize="small" />} onClick={() => open(fav, 'stock-table')} />
                           <OpenButton label={`Analyse ${fav.code}`} icon={<InsightsOutlinedIcon fontSize="small" />} onClick={() => open(fav, 'analysis')} />
+                          <OpenLink label={`Search ${fav.code} in Nordnet`} href={nordnetUrl(fav.code, fav.exchange, fav.name)}>
+                            <OpenInNewIcon fontSize="small" />
+                          </OpenLink>
                         </Stack>
                       </TableCell>
                     </TableRow>

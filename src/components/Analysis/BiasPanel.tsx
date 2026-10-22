@@ -16,6 +16,7 @@ interface BiasPanelProps {
   bias: AnalysisResult['bias'];
   signals: Signal[];
   tradingViewHref: string;
+  nordnetHref: string;
 }
 
 const PILL_COLOURS = {
@@ -44,7 +45,7 @@ const ScoreBar = ({ score }: { score: number }) => {
   );
 };
 
-const BiasPanel = ({ name, code, lastClose, dayChangePercent, asOf, bias, signals, tradingViewHref }: BiasPanelProps) => {
+const BiasPanel = ({ name, code, lastClose, dayChangePercent, asOf, bias, signals, tradingViewHref, nordnetHref }: BiasPanelProps) => {
   const signalsId = useId();
   const changeColour = dayChangePercent > 0 ? tokens.up : dayChangePercent < 0 ? tokens.down : tokens.textSecondary;
 
@@ -75,6 +76,16 @@ const BiasPanel = ({ name, code, lastClose, dayChangePercent, asOf, bias, signal
             sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minHeight: 40, fontWeight: 600 }}
           >
             Open in TradingView
+            <OpenInNewIcon sx={{ fontSize: 14 }} />
+          </Link>
+          <Link
+            href={nordnetHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            underline="none"
+            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minHeight: 40, fontWeight: 600 }}
+          >
+            Open in Nordnet
             <OpenInNewIcon sx={{ fontSize: 14 }} />
           </Link>
           <Typography variant="caption" color="text.secondary">

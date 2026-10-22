@@ -46,6 +46,7 @@ describe('BiasPanel', () => {
             bias={bias}
             signals={signals}
             tradingViewHref="https://www.tradingview.com/chart/?symbol=AAPL"
+            nordnetHref="https://www.nordnet.fi/etsi?q=AAPL"
         />
     )
 
@@ -93,6 +94,7 @@ describe('BiasPanel', () => {
                 bias={{ score: 0, label: 'Stand aside', reasons: ['Not enough history'] }}
                 signals={[]}
                 tradingViewHref="https://www.tradingview.com/chart/?symbol=AAPL"
+                nordnetHref="https://www.nordnet.fi/etsi?q=AAPL"
             />
         )
 
@@ -107,6 +109,15 @@ describe('BiasPanel', () => {
         expect(link).toHaveAttribute('target', '_blank')
         expect(link).toHaveAttribute('rel', 'noopener noreferrer')
         expect(screen.getByText('Daily data to Fri 9 Oct close. Not investment advice.')).toBeInTheDocument()
+    })
+
+    it('links to the Nordnet search in a new tab', () => {
+        renderBias()
+
+        const link = screen.getByRole('link', { name: /Open in Nordnet/ })
+        expect(link).toHaveAttribute('href', 'https://www.nordnet.fi/etsi?q=AAPL')
+        expect(link).toHaveAttribute('target', '_blank')
+        expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     })
 })
 
