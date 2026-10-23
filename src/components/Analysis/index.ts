@@ -4,3 +4,4 @@ export { default as TrendCard } from './TrendCard';
 export { default as TypicalDayCard } from './TypicalDayCard';
 export { default as LevelsCard } from './LevelsCard';
 export { default as NewsCard } from './NewsCard';
+export { default as BacktestPanel } from './BacktestPanel';
