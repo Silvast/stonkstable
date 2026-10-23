@@ -56,6 +56,23 @@ describe('Analysis page', () => {
         expect(screen.queryByRole('heading', { name: 'Signals that fired' })).not.toBeInTheDocument()
     })
 
+    it('backtests the bias on the loaded bars without any further API calls', async () => {
+        const user = userEvent.setup()
+        const fetchSpy = stubFetch()
+        render(<Analysis />)
+
+        await user.click(analyzeButton())
+        await expectAllCards()
+        await user.click(screen.getByRole('button', { name: 'How has this signal done?' }))
+
+        const table = screen.getByRole('table', { name: 'Bias backtest results' })
+        for (const header of ['1 day', '3 days', '5 days']) {
+            expect(within(table).getByRole('columnheader', { name: header })).toBeInTheDocument()
+        }
+        expect(within(table).getByRole('row', { name: /All days/ })).toBeInTheDocument()
+        expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
     it('fetches 180 days of EOD and 3 days of news once on Analyse and renders every panel', async () => {
         const user = userEvent.setup()
         const fetchSpy = stubFetch()

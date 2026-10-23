@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Link, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -8,12 +8,13 @@ import ExchangeToggle from '../components/StockSelector/ExchangeToggle';
 import FavouriteToggle from '../components/Favourites/FavouriteToggle';
 import Panel from '../components/common/Panel';
 import { CodeChip } from '../components/common/Chips';
-import { BiasPanel, LevelsCard, NewsCard, RsiCard, TrendCard, TypicalDayCard } from '../components/Analysis';
+import { BacktestPanel, BiasPanel, LevelsCard, NewsCard, RsiCard, TrendCard, TypicalDayCard } from '../components/Analysis';
 import { useStockSelection } from '../context/StockSelectionContext';
 import { AnalysisResult, buildAnalysis } from '../utils/analysis';
+import { backtestBias } from '../utils/biasBacktest';
 import { readCache, writeCache } from '../utils/analysisCache';
 import { fetchNewsFromApi } from '../utils/news';
-import { fetchStockDataFromApi } from '../utils/stockTable';
+import { StockData, fetchStockDataFromApi } from '../utils/stockTable';
 import { tradingViewUrl } from '../utils/tradingView';
 import { tokens } from '../theme';
 
@@ -22,12 +23,13 @@ const NEWS_DAYS = 3;
 
 interface LoadedAnalysis {
   result: AnalysisResult;
+  bars: StockData[];
   cachedAt: string | null;
 }
 
 const fromCache = (symbol: string, exchange: string): LoadedAnalysis | null => {
   const cached = readCache(symbol, exchange);
-  return cached ? { result: buildAnalysis(cached.eod, cached.news), cachedAt: cached.fetchedAt } : null;
+  return cached ? { result: buildAnalysis(cached.eod, cached.news), bars: cached.eod, cachedAt: cached.fetchedAt } : null;
 };
 
 const Analysis = (): React.ReactElement => {
@@ -73,7 +75,7 @@ const Analysis = (): React.ReactElement => {
     }
 
     writeCache(symbol, exchange, eod, news);
-    setLoaded({ result: buildAnalysis(eod.data, news), cachedAt: null });
+    setLoaded({ result: buildAnalysis(eod.data, news), bars: eod.data, cachedAt: null });
   }, [symbol, exchange, apiKey]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -82,6 +84,8 @@ const Analysis = (): React.ReactElement => {
   };
 
   const result = loaded?.result;
+  const bars = loaded?.bars;
+  const backtest = useMemo(() => (bars ? backtestBias(bars) : null), [bars]);
   const name = selectedStock?.Name ?? symbol;
   const code = `${symbol}.${exchange}`;
   const tvHref = tradingViewUrl(symbol, exchange);
@@ -151,6 +155,7 @@ const Analysis = (): React.ReactElement => {
             signals={result.signals}
             tradingViewHref={tvHref}
           />
+          {backtest && <BacktestPanel backtest={backtest} />}
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
             <RsiCard rsi={result.rsi} />
             <TrendCard trend={result.trend} />
