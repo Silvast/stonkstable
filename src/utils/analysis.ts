@@ -12,7 +12,7 @@ export const ANALYSIS_THRESHOLDS = {
   biasShort: -2,
 };
 
-const MIN_BARS = 20;
+export const MIN_BARS = 20;
 
 type RsiLabel = 'Oversold' | 'Neutral' | 'Overbought';
 type TrendLabel = 'Up' | 'Down' | 'Sideways';
