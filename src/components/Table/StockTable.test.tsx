@@ -17,13 +17,21 @@ const readBlob = (blob: Blob) => new Promise<string>(resolve => {
     reader.readAsText(blob)
 })
 
+const mockQuote = { code: 'AAPL.US', timestamp: 1762444800, close: 157.5, change: 2.5, change_p: 1.6129 }
+// Routes the live quote endpoint to a quote and everything else to the EOD rows
+const routedFetch = (quote: unknown = mockQuote) => vi.fn((url: string) =>
+    url.includes('/real-time/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => quote } as Response)
+        : mockSuccessResponse(mockStockData))
+const eodCalls = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map(call => call[0] as string).filter(url => url.includes('/eod/'))
+
 const waitForData = () => screen.findByRole('heading', { level: 2, name: 'Daily prices' })
 
 describe('StockTable Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         localStorage.clear()
-        vi.stubGlobal('fetch', vi.fn(() => mockSuccessResponse(mockStockData)))
+        vi.stubGlobal('fetch', routedFetch())
     })
 
     afterEach(() => {
@@ -71,14 +79,14 @@ describe('StockTable Component', () => {
         })
 
         it('defaults the from-date to six weeks before today', async () => {
-            const fetchSpy = vi.fn((_url: string) => mockSuccessResponse(mockStockData))
+            const fetchSpy = routedFetch()
             vi.stubGlobal('fetch', fetchSpy)
             render(<StockTable />)
-            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+            await waitFor(() => expect(eodCalls(fetchSpy)).toHaveLength(1))
 
             const expectedFrom = dayjs().subtract(6, 'week').format('YYYY-MM-DD')
             const expectedTo = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
-            const calledUrl = fetchSpy.mock.calls[0][0] as string
+            const calledUrl = eodCalls(fetchSpy)[0]
             expect(calledUrl).toContain(`from=${expectedFrom}`)
             expect(calledUrl).toContain(`to=${expectedTo}`)
 
@@ -89,30 +97,31 @@ describe('StockTable Component', () => {
 
         it('fetches once on load and again when Fetch is pressed', async () => {
             const user = userEvent.setup()
-            const fetchSpy = vi.fn(() => mockSuccessResponse(mockStockData))
+            const fetchSpy = routedFetch()
             vi.stubGlobal('fetch', fetchSpy)
             render(<StockTable />)
-            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+            await waitFor(() => expect(eodCalls(fetchSpy)).toHaveLength(1))
 
             await user.click(screen.getByRole('button', { name: 'Fetch' }))
 
-            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+            await waitFor(() => expect(eodCalls(fetchSpy)).toHaveLength(2))
         })
 
         it('fetches the chosen stock on the chosen exchange', async () => {
             const user = userEvent.setup()
-            const fetchSpy = vi.fn((_url: string) => mockSuccessResponse(mockStockData))
+            const fetchSpy = routedFetch()
             vi.stubGlobal('fetch', fetchSpy)
             render(<StockTable />)
-            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+            await waitFor(() => expect(eodCalls(fetchSpy)).toHaveLength(1))
 
             await chooseExchange(user, 'HE')
             await user.type(getStockInput(), 'NOKIA')
             await user.click(await screen.findByRole('option', { name: /Nokia Oyj \(NOKIA\)/i }))
             await user.click(screen.getByRole('button', { name: 'Fetch' }))
 
-            await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
-            expect(fetchSpy.mock.calls[1][0]).toContain('/api/eodhd/eod/NOKIA.HE?')
+            await waitFor(() => expect(eodCalls(fetchSpy)).toHaveLength(2))
+            expect(eodCalls(fetchSpy)[1]).toContain('/api/eodhd/eod/NOKIA.HE?')
+            expect(fetchSpy.mock.calls.map(call => call[0])).toContain('/api/eodhd/real-time/NOKIA.HE?api_token=demo&fmt=json')
         })
     })
 
@@ -178,6 +187,27 @@ describe('StockTable Component', () => {
             expect(tile('42-day low')).toHaveTextContent('143.00')
             expect(tile('Avg. volume')).toHaveTextContent('1M')
             expect(tile('Up days')).toHaveTextContent('2 / 5')
+        })
+
+        it('shows the delayed current value first, before Period change', async () => {
+            render(<StockTable />)
+            await waitForData()
+
+            const tile = (label: string) => screen.getByText(label).parentElement!
+            expect(tile('Current value')).toHaveTextContent('157.50')
+            expect(tile('Current value')).toHaveTextContent('+1.61%')
+            const labels = screen.getAllByText(/^(Current value|Period change)$/).map(el => el.textContent)
+            expect(labels).toEqual(['Current value', 'Period change'])
+        })
+
+        it('shows a dash when the live quote is not available', async () => {
+            vi.stubGlobal('fetch', routedFetch({ code: 'AAPL.US', close: 'NA' }))
+            render(<StockTable />)
+            await waitForData()
+
+            const tile = screen.getByText('Current value').parentElement!
+            expect(tile).toHaveTextContent('—')
+            expect(tile).toHaveTextContent('Not available')
         })
     })
 
@@ -323,19 +353,20 @@ describe('StockTable Component', () => {
             render(<StockTable />)
             await waitForData()
 
-            expect(screen.getByText('End-of-day data from EODHD. Not investment advice.')).toBeInTheDocument()
+            expect(screen.getByText('End-of-day data from EODHD. Current value is delayed about 15 minutes. Not investment advice.')).toBeInTheDocument()
         })
     })
 
     describe('Loading and errors', () => {
         it('shows a loading indicator during the fetch', async () => {
-            let resolveFetch: (value: Response) => void = () => {}
-            vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { resolveFetch = resolve })))
+            const pending: Array<(value: Response) => void> = []
+            vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { pending.push(resolve) })))
             render(<StockTable />)
 
             expect(await screen.findByRole('progressbar')).toBeInTheDocument()
 
-            resolveFetch(await mockSuccessResponse(mockStockData))
+            const response = await mockSuccessResponse(mockStockData)
+            pending.forEach(resolve => resolve(response))
             await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument())
         })
 

@@ -6,6 +6,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import { StockData, fetchStockDataFromApi } from '../../utils/stockTable';
+import { LiveQuote, fetchLiveQuote } from '../../utils/liveQuote';
 import { formatDateRange, summarisePrices } from '../../utils/priceStats';
 import { useStockSelection } from '../../context/StockSelectionContext';
 import StockSearchField from '../StockSelector/StockSearchField';
@@ -19,6 +20,7 @@ import PricesTable from './PricesTable';
 const StockTable = () => {
   const { symbol, exchange, apiKey, selectedStock } = useStockSelection();
   const [data, setData] = useState<StockData[]>([]);
+  const [quote, setQuote] = useState<LiveQuote | null>(null);
   const [fetched, setFetched] = useState<FetchedStock | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +41,13 @@ const StockTable = () => {
       setLoading(true);
       setError(null);
 
-      const result = await fetchStockDataFromApi(symbol, exchange, startDate, endDate, apiKey);
+      const [result, liveQuote] = await Promise.all([
+        fetchStockDataFromApi(symbol, exchange, startDate, endDate, apiKey),
+        fetchLiveQuote(symbol, exchange, apiKey),
+      ]);
 
       setData(result.data);
+      setQuote(liveQuote);
       setError(result.error);
       setFetched(request);
       setLoading(false);
@@ -107,14 +113,14 @@ const StockTable = () => {
       {!loading && !error && fetched && summary && (
         <>
           <StockHeader fetched={fetched} summary={summary} />
-          <KpiTiles summary={summary} />
+          <KpiTiles summary={summary} quote={quote} />
           <PricesTable rows={data} code={`${fetched.symbol}.${fetched.exchange}`} />
           <PriceChartPanel rows={data} />
         </>
       )}
 
       <Typography variant="caption" component="p" color="text.secondary">
-        End-of-day data from EODHD. Not investment advice.
+        End-of-day data from EODHD. Current value is delayed about 15 minutes. Not investment advice.
       </Typography>
     </Stack>
   );
